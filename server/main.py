@@ -71,6 +71,8 @@ async def game_start(request: Request):
         state.black_engine = [e for e in engines if e.name == info.black_player][0]()
         state.black_engine.init(tc)
 
+    state.turn = "white";
+
     return NO_RESPONSE
 
 @app.get("/engine-list/")

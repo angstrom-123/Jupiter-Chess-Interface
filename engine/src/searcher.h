@@ -79,7 +79,9 @@ private:
     bool SquareUnderAttackBy(uint64_t bit, Color::Value color, Piece::Value piece, const BoardState& state);
     bool SquareUnderAttack(uint64_t bit, Color::Value color, const BoardState& state);
     bool WasLegal(MoveData moveData, const BoardState& state);
-    void OrderMoves(Move bestMove, const AttackMoveBuffer& attacks, const QuietMoveBuffer& quiets, CombinedMoveBuffer& ordered);
+    void OrderMoves(const BoardState& state, Move bestMove, const AttackMoveBuffer& attacks, const QuietMoveBuffer& quiets, CombinedMoveBuffer& ordered);
+    void OrderMoves(const BoardState& state, Move bestMove, const AttackMoveBuffer& attacks, CombinedMoveBuffer& ordered);
+    int64_t SEE(Move move, const BoardState& state);
 
 private:
     uint64_t m_TimeControlSeconds{0};

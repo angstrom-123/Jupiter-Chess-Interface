@@ -85,7 +85,7 @@ Piece::Value BitboardSet::PieceInSquare(Color::Value color, uint8_t index) const
 {
     if (Has(index)) {
         uint64_t bit = 1ul << index;
-        for (uint64_t piece = 0; piece < Piece::MAX_ENUM; piece++) {
+        for (uint8_t piece = 0; piece < Piece::MAX_ENUM; piece++) {
             if (m_Bits[color][piece] & bit)
                 return static_cast<Piece::Value>(piece);
         }
@@ -97,8 +97,8 @@ std::pair<Color::Value, Piece::Value> BitboardSet::PieceInSquare(uint8_t index) 
 {
     if (Has(index)) {
         uint64_t bit = 1ul << index;
-        for (uint64_t color = 0; color < Color::MAX_ENUM; color++) {
-            for (uint64_t piece = 0; piece < Piece::MAX_ENUM; piece++) {
+        for (uint8_t color = 0; color < Color::MAX_ENUM; color++) {
+            for (uint8_t piece = 0; piece < Piece::MAX_ENUM; piece++) {
                 if (m_Bits[color][piece] & bit)
                     return std::make_pair(static_cast<Color::Value>(color), static_cast<Piece::Value>(piece));
             }

@@ -38,7 +38,7 @@ public:
     {
         return m_Data;
     }
-    std::size_t Size()
+    std::size_t Size() const
     {
         return m_Size;
     }

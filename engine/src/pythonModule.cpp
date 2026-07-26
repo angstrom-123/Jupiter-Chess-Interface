@@ -1,18 +1,30 @@
-#include <Python.h>
+#include <csignal>
+#include <cstdlib>
 #include <cstring>
+#include <iostream>
 
-#include "libchess/board.h"
-#include "methodobject.h"
+#include <Python.h>
+#include <methodobject.h>
+#include <pytypedefs.h>
+#include <unicodeobject.h>
+
+#include "libjupiter/board.h"
 #include "move.h"
-#include "pytypedefs.h"
-#include "unicodeobject.h"
 
 // Wrappers
+
+void SegfaultHandler(int signal)
+{
+    std::cerr << "\n========== FATAL (" << signal << ") ==========\n";
+    std::cerr << "==== C++ Stack Trace ====\n";
+    std::cerr << std::stacktrace::current(1);
+    std::abort();
+}
 
 namespace py {
     struct Board {
         PyObject_HEAD
-        libchess::Board* board;
+        libjupiter::Board* board;
     };
 
     static void BoardDealloc(Board *self)
@@ -34,7 +46,7 @@ namespace py {
         char *fen = nullptr;
         if (!PyArg_ParseTuple(args, "|s", &fen))
             return -1;
-        self->board = new libchess::Board(fen);
+        self->board = new libjupiter::Board(fen);
         return 0;
     }
 
@@ -122,8 +134,8 @@ namespace py {
 
     static PyTypeObject boardType = {
         .ob_base = PyVarObject_HEAD_INIT(nullptr, 0)
-        .tp_name = "libchess.Board",
-        .tp_basicsize = sizeof(libchess::Board),
+        .tp_name = "libjupiter.Board",
+        .tp_basicsize = sizeof(libjupiter::Board),
         .tp_itemsize = 0,
         .tp_dealloc = reinterpret_cast<destructor>(BoardDealloc),
         .tp_repr = reinterpret_cast<reprfunc>(BoardRepr),
@@ -137,25 +149,28 @@ namespace py {
 
 // Module Method Table
 
-static PyMethodDef libchessMethods[] = {
+static PyMethodDef libjupiterMethods[] = {
     { nullptr, nullptr, 0, nullptr }
 };
 
 // Module Definition
 
-static PyModuleDef libchessModule = {
+static PyModuleDef libjupiterModule = {
     PyModuleDef_HEAD_INIT,
-    "libchess",
+    "libjupiter",
     nullptr,
     -1,
-    libchessMethods
+    libjupiterMethods
 };
 
 // Module Init
 
-PyMODINIT_FUNC PyInit_libchess(void)
+PyMODINIT_FUNC PyInit_libjupiter(void)
 {
-    PyObject * module = PyModule_Create(&libchessModule);
+    std::signal(SIGSEGV, SegfaultHandler);
+    std::signal(SIGILL, SegfaultHandler);
+    std::signal(SIGFPE, SegfaultHandler);
+    PyObject * module = PyModule_Create(&libjupiterModule);
     if (!module)
         return nullptr;
 

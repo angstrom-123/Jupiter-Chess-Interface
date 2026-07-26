@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(chess VERSION 0.0.1 LANGUAGES CXX)
+project(jupiter VERSION 0.0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,9 +29,9 @@ set(SOURCES
     engine/src/pythonModule.cpp
 )
 
-add_library(chess SHARED ${SOURCES})
+add_library(jupiter SHARED ${SOURCES})
 
-target_include_directories(chess 
+target_include_directories(jupiter 
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/include>
         $<INSTALL_INTERFACE:include>
@@ -40,26 +40,37 @@ target_include_directories(chess
         ${CMAKE_CURRENT_SOURCE_DIR}/engine/src
 )
 
-target_link_libraries(chess PRIVATE ${Python3_LIBRARIES})
-
-target_compile_options(chess PRIVATE -msse4.2 -mpopcnt)
-
-if(WIN32)
-    set_target_properties(chess PROPERTIES SUFFIX ".pyd")
-else()
-    set_target_properties(chess PROPERTIES SUFFIX ".so")
+# Link in stack trace library per compiler
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_link_libraries(jupiter PRIVATE stdc++_libbacktrace)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(jupiter PRIVATE -stdlib=libstdc++)
+    target_link_options(jupiter PRIVATE -stdlib=libstdc++)
+    target_link_libraries(jupiter PRIVATE stdc++_libbacktrace dl backtrace)
+elseif (MSVC)
+    target_link_libraries(jupiter PRIVATE dbghelp)
 endif()
 
-set(PACKAGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/libchess")
+target_link_libraries(jupiter PRIVATE ${Python3_LIBRARIES})
+
+target_compile_options(jupiter PRIVATE -msse4.2 -mpopcnt)
+
+if(WIN32)
+    set_target_properties(jupiter PROPERTIES SUFFIX ".pyd")
+else()
+    set_target_properties(jupiter PROPERTIES SUFFIX ".so")
+endif()
+
+set(PACKAGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/libjupiter")
 file(MAKE_DIRECTORY ${PACKAGE_DIR})
 
-set_target_properties(chess PROPERTIES 
+set_target_properties(jupiter PROPERTIES 
     LIBRARY_OUTPUT_DIRECTORY ${PACKAGE_DIR}
     RUNTIME_OUTPUT_DIRECTORY ${PACKAGE_DIR}
 )
 
 if(NOT EXISTS "${PACKAGE_DIR}/__init__.py")
-    file(WRITE "${PACKAGE_DIR}/__init__.py" "from .libchess import *")
+    file(WRITE "${PACKAGE_DIR}/__init__.py" "from .libjupiter import *")
 endif()
 
-message(STATUS "Python module will be built as: $<TARGET_FILE_NAME:chess>")
+message(STATUS "Python module will be built as: $<TARGET_FILE_NAME:jupiter>")

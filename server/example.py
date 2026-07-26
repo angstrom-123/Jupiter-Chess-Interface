@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-# import libchess
-from libchess import Board
+from libjupiter import Board
 
 # ========== Create a board ==========
 
-# Start position
-# board = libchess.Board()
+# Start Position
+# board: Board = Board()
 
-# Alternatively Arbitrary position FEN
-board: Board = Board("6k1/p7/1p6/8/7P/5K2/8/6q1 w - - 0 1")
+# Alternatively Arbitrary FEN
+board: Board = Board("k7/8/8/8/3R4/8/8/K7 w - - 0 1")
 
 # ========== Check for errors ==========
 
@@ -17,6 +16,13 @@ if board.has_error():
     error = board.get_error()
     print(error)
     exit(1)
+
+# ========== Set Time Control ==========
+
+# Time control
+increment: int = 1
+seconds: int = 30
+board.set_time_control(seconds, increment)
 
 # ========== Search for best move ==========
 

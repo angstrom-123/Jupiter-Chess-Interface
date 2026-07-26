@@ -1,7 +1,8 @@
 #pragma once
 
+#include "exception.h"
 #include <cstdint>
-#include <utility>
+#include <cstdlib>
 
 uint8_t ToIndex(uint8_t x, uint8_t y);
 uint8_t Difference(uint8_t a, uint8_t b);
@@ -36,7 +37,7 @@ struct Color {
         switch (value) {
             case Value::WHITE: return Value::BLACK;
             case Value::BLACK: return Value::WHITE;
-            case Value::MAX_ENUM: return Invalid();
+            default: throw Exception("Getting opposite of invalid colour.");
         }
     }
 };
@@ -63,7 +64,7 @@ struct Piece {
             case ROOK: return "Rook";
             case QUEEN: return "Queen";
             case KING: return "King";
-            default: return "Invalid";
+            default: return "None";
         }
     }
     static int64_t Evaluate(Value value) 
@@ -75,7 +76,7 @@ struct Piece {
             case ROOK: return 500;
             case QUEEN: return 975;
             case KING: return 0;
-            default: return 0;
+            default: throw Exception("Evaluating invalid piece.");
         }
     }
 };
@@ -93,7 +94,7 @@ struct CastlingRight {
         switch (color) {
             case Color::WHITE: return KINGSIDE_WHITE;
             case Color::BLACK: return KINGSIDE_BLACK;
-            default: std::unreachable();
+            default: throw Exception("Getting kingside castling right for invalid colour.");
         }
     }
     static Value Queenside(Color::Value color)
@@ -101,7 +102,7 @@ struct CastlingRight {
         switch (color) {
             case Color::WHITE: return QUEENSIDE_WHITE;
             case Color::BLACK: return QUEENSIDE_BLACK;
-            default: std::unreachable();
+            default: throw Exception("Getting queenside castling right for invalid colour.");
         }
     }
 };

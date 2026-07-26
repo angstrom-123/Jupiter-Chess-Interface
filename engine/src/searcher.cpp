@@ -1,4 +1,5 @@
 #include "searcher.h"
+#include "boardState.h"
 #include "move.h"
 #include "evaluator.h"
 #include "movegen.h"
@@ -10,6 +11,7 @@
 #include <ctime>
 #include <immintrin.h>
 #include <iostream>
+#include <utility>
 
 namespace chrono = std::chrono;
 
@@ -55,7 +57,7 @@ Move Searcher::FindBest(const BoardState& state, uint64_t msRemaining)
         movegen::FindQuiets(std::forward<const BoardState>(state), m_AttackTable, quietMoves);
 
         CombinedMoveBuffer moves;
-        OrderMoves(bestMove, attackMoves, quietMoves, moves);
+        OrderMoves(std::forward<const BoardState>(state), bestMove, attackMoves, quietMoves, moves);
         std::cout << "Found " << moves.Size() << " moves at root" << std::endl;
 
         Move depthBestMove = Move::Invalid();
@@ -210,7 +212,7 @@ int64_t Searcher::Search(SearchInfo&& info)
     movegen::FindQuiets(std::forward<const BoardState>(info.state), m_AttackTable, quietMoves);
 
     CombinedMoveBuffer moves;
-    OrderMoves(refutationMove, attackMoves, quietMoves, moves);
+    OrderMoves(std::forward<const BoardState>(info.state), refutationMove, attackMoves, quietMoves, moves);
 
     int64_t originalAlpha = info.alpha; // For classifying the node type at the end
 
@@ -290,19 +292,52 @@ int64_t Searcher::Quiesce(QuiesceInfo&& info)
     if (max > info.alpha)
         info.alpha = max;
 
+    // Transposition Lookup
+    Move refutationMove = Move::Invalid();
+    TableEntry lookup = m_TranspositionTable.Get(std::forward<const BoardState>(info.state));
+    if (lookup.IsValid()) {
+        // Only save refutation move if it is a capture (as this is a quiescence search)
+        if (Piece::IsValid(info.state.pieces.PieceInSquare(Color::Opposite(info.state.turn), lookup.bestMove.to)))
+            refutationMove = lookup.bestMove;
+
+        m_TranspositionHits++;
+
+        int64_t score = lookup.score;
+
+        if (score > MATE_THRESOLD) 
+            score += info.ply;
+
+        if (score < -MATE_THRESOLD) 
+            score -= info.ply;
+
+        if (lookup.nodeType == NodeType::LOWER_BOUND)
+            info.alpha = std::max(info.alpha, score);
+
+        if (lookup.nodeType == NodeType::UPPER_BOUND)
+            info.beta = std::min(info.beta, score);
+
+        if (info.alpha >= info.beta)
+            return score;
+    }
+
     AttackMoveBuffer attackMoves;
     movegen::FindAttacks(info.state, m_AttackTable, attackMoves);
 
-    // TODO: Move ordering here
+    CombinedMoveBuffer moves;
+    OrderMoves(std::forward<const BoardState>(info.state), refutationMove, attackMoves, moves);
 
     const uint8_t phase = m_Eval.GamePhase(std::forward<const BoardState>(info.state)) < 90;
 
-    for (Move move : attackMoves) {
+    for (const Move move : moves) {
         // Delta pruning
         if (phase < 85) { // Don't prune in late endgames
             const int64_t DELTA_MARGIN = 200;
             if (!Piece::IsValid(move.promote)) { // Don't prune promotions
+
                 Piece::Value capture = info.state.pieces.PieceInSquare(Color::Opposite(info.state.turn), move.to);
+                if (!Piece::IsValid(capture)) // en passant
+                    capture = info.state.pieces.PieceInSquare(Color::Opposite(info.state.turn), (info.state.turn == Color::WHITE) ? move.to + 8 : move.to - 8);
+
                 if (staticEval + Piece::Evaluate(capture) + DELTA_MARGIN < info.alpha)
                     continue;
             }
@@ -310,6 +345,7 @@ int64_t Searcher::Quiesce(QuiesceInfo&& info)
 
         m_NodesSearched++;
         m_NodesQuiesced++;
+
         MoveData moveData = MakeMove(move, info.state);
         if (!WasLegal(moveData, info.state)) {
             UnmakeMove(moveData, info.state);
@@ -383,7 +419,7 @@ MoveData Searcher::MakeMove(Move move, BoardState& state)
         state.pieces.Unset(enemy, Piece::PAWN, (friendly == Color::WHITE) ? move.to + 8 : move.to - 8);
 
     // Avoid updating castling rights after both sides lose the right
-    if (state.rights != 0) {
+    if (state.rights > 0) {
         // Remove castling rights if king moved
         if (move.piece == Piece::KING)
             state.rights = 0;
@@ -459,46 +495,47 @@ void Searcher::UnmakeMove(MoveData moveData, BoardState& state)
 bool Searcher::SquareUnderAttack(uint64_t bit, Color::Value color, const BoardState& state)
 {
     uint8_t index = _tzcnt_u64(bit);
+    Color::Value enemy = Color::Opposite(color);
     Bitboard occupancy = state.pieces.OccupancyMask();
 
     // Pawns
     {
-        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::PAWN, Color::Opposite(color), occupancy);
+        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::PAWN, enemy, occupancy);
         if (attacks & state.pieces.OccupancyMask(color, Piece::PAWN))
             return true;
     }
 
     // Knights
     {
-        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::KNIGHT, Color::Opposite(color), occupancy);
+        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::KNIGHT, enemy, occupancy);
         if (attacks & state.pieces.OccupancyMask(color, Piece::KNIGHT))
             return true;
     }
 
     // Bishops
     {
-        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::BISHOP, Color::Opposite(color), occupancy);
+        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::BISHOP, enemy, occupancy);
         if (attacks & state.pieces.OccupancyMask(color, Piece::BISHOP))
             return true;
     }
 
     // Rooks
     {
-        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::ROOK, Color::Opposite(color), occupancy);
+        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::ROOK, enemy, occupancy);
         if (attacks & state.pieces.OccupancyMask(color, Piece::ROOK))
             return true;
     }
 
     // Queens
     {
-        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::QUEEN, Color::Opposite(color), occupancy);
+        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::QUEEN, enemy, occupancy);
         if (attacks & state.pieces.OccupancyMask(color, Piece::QUEEN))
             return true;
     }
 
     // Kings
     {
-        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::KING, Color::Opposite(color), occupancy);
+        Bitboard attacks = m_AttackTable.GetAttacks(index, Piece::KING, enemy, occupancy);
         if (attacks & state.pieces.OccupancyMask(color, Piece::KING))
             return true;
     }
@@ -524,19 +561,123 @@ bool Searcher::WasLegal(MoveData moveData, const BoardState& state)
     return !targetAttacked;
 }
 
-// TODO: Improve this
-void Searcher::OrderMoves(Move bestMove, const AttackMoveBuffer& attacks, const QuietMoveBuffer& quiets, CombinedMoveBuffer& ordered)
+void Searcher::OrderMoves(const BoardState& state, Move bestMove, const AttackMoveBuffer& attacks, CombinedMoveBuffer& ordered)
 {
     if (Move::IsValid(bestMove))
         ordered.PushBack(bestMove);
 
+    Buffer<Move, 50> badAttacks;
     for (const Move move : attacks) {
-        if (move != bestMove)
+        if (move == bestMove)
+            continue;
+
+        int64_t see = SEE(move, std::forward<const BoardState>(state));
+        if (see > 0)
             ordered.PushBack(move);
+        else 
+            badAttacks.PushBack(move);
+    }
+
+    for (const Move move : badAttacks) {
+        ordered.PushBack(move);
+    }
+}
+
+void Searcher::OrderMoves(const BoardState& state, Move bestMove, const AttackMoveBuffer& attacks, const QuietMoveBuffer& quiets, CombinedMoveBuffer& ordered)
+{
+    if (Move::IsValid(bestMove))
+        ordered.PushBack(bestMove);
+
+    Buffer<Move, 50> badAttacks;
+    for (const Move move : attacks) {
+        if (move == bestMove)
+            continue;
+
+        int64_t see = SEE(move, std::forward<const BoardState>(state));
+        if (see > 0)
+            ordered.PushBack(move);
+        else 
+            badAttacks.PushBack(move);
     }
 
     for (const Move move : quiets) {
-        if (move != bestMove)
-            ordered.PushBack(move);
+        if (move == bestMove)
+            continue;
+
+        ordered.PushBack(move);
     }
+
+    for (const Move move : badAttacks) {
+        ordered.PushBack(move);
+    }
+}
+
+int64_t Searcher::SEE(Move move, const BoardState& state)
+{
+    BitboardSet pieces(state.pieces);
+    Color::Value enemy = Color::Opposite(state.turn);
+
+    // Simulate first capture
+    Piece::Value firstCapture = pieces.PieceInSquare(enemy, move.to);
+    if (!Piece::IsValid(firstCapture)) // en passant
+        firstCapture = pieces.PieceInSquare(enemy, (enemy == Color::WHITE) ? move.to - 8 : move.to + 8);
+    pieces.Unset(enemy, firstCapture, move.to);
+    pieces.Unset(state.turn, move.piece, move.from);
+    pieces.Set(state.turn, move.piece, move.to);
+
+    Buffer<int64_t, 16> gain;
+    gain.PushBack(Piece::Evaluate(firstCapture));
+
+    // TODO: Don't recalculate attackers at each iteration, just update the bitboards 
+    //       iteratively at each step. Then only sliders need recalculation (in case of discovery).
+
+    Color::Value turn = enemy;
+    Piece::Value target = move.piece;
+    while (true) {
+        Color::Value opponentTurn = Color::Opposite(turn);
+
+        // Find attackers
+        Bitboard attackers[Color::MAX_ENUM][Piece::MAX_ENUM];
+        for (uint8_t i = Color::WHITE; i < Color::MAX_ENUM; i++) {
+            Color::Value friendly = static_cast<Color::Value>(i);
+            Color::Value opponent = Color::Opposite(friendly);
+            for (uint8_t j = Piece::PAWN; j < Piece::MAX_ENUM; j++) {
+                Piece::Value piece = static_cast<Piece::Value>(j);
+                attackers[friendly][piece] = m_AttackTable.GetAttacks(move.to, piece, opponent, pieces.OccupancyMask()) & pieces.OccupancyMask(friendly, piece);
+            }
+        }
+
+        // Find least valuable attacker
+        uint8_t from = UINT8_MAX;
+        Piece::Value attacker = Piece::Invalid();
+        for (uint8_t i = Piece::PAWN; i < Piece::MAX_ENUM; i++) {
+            Bitboard attackerOccupancy = attackers[turn][i];
+            if (attackerOccupancy) {
+                from = _tzcnt_u64(attackerOccupancy);
+                attacker = static_cast<Piece::Value>(i);
+                attackers[turn][i] &= (attackerOccupancy - 1);
+                break;
+            }
+        }
+        if (!Piece::IsValid(attacker))
+            break;
+
+        // Update gain
+        gain.PushBack(Piece::Evaluate(target) - gain[gain.Size() - 1]);
+
+        // Simulate capture
+        pieces.Unset(turn, attacker, from);
+        pieces.Unset(opponentTurn, target, move.to);
+        pieces.Set(turn, attacker, move.to);
+
+        // Swap turn
+        target = attacker;
+        turn = Color::Opposite(turn);
+    }
+
+    // Traverse gain
+    for (int8_t i = static_cast<int8_t>(gain.Size()) - 1; i > 0; i--)
+        gain[i - 1] = -std::max(-gain[i - 1], gain[i]);
+
+    return gain[0];
 }

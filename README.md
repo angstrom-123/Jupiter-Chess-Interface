@@ -69,7 +69,7 @@ from typing_extensions import override
 from server.engine import BaseEngine
 
 # This is the custom engine implementation - in this case Jupiter's Board
-from libchess import Board
+from jupiter import Board
 
 # Override all required methods of BaseEngine
 class Jupiter(BaseEngine):

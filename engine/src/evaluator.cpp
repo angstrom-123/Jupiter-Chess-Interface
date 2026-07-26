@@ -1,4 +1,5 @@
 #include "evaluator.h"
+#include "movegen.h"
 #include <immintrin.h>
 #include <cmath>
 

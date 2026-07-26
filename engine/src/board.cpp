@@ -1,4 +1,4 @@
-#include "libchess/board.h"
+#include "libjupiter/board.h"
 #include "core.h"
 #include "move.h"
 #include <charconv>
@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-namespace libchess {
+namespace libjupiter {
     Board::Board(const char *fen)
     {
         if (fen == nullptr)
@@ -260,7 +260,7 @@ namespace libchess {
             if (Color::IsValid(color) && Piece::IsValid(piece))
                 ss << symbols[color][piece] << ' ';
             else
-                ss << "  ";
+                ss << ". ";
         }
         result = ss.str();
     }

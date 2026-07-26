@@ -2,7 +2,7 @@ from typing_extensions import override
 
 from server.engine import BaseEngine, TimeControl
 
-from libchess import Board
+from libjupiter import Board
 
 class Jupiter(BaseEngine):
     name: str = "Jupiter"

@@ -8,7 +8,7 @@
 #include "move.h"
 #include "searcher.h"
 
-namespace libchess {
+namespace libjupiter {
     class Board {
     public:
         Board(const char *fen);

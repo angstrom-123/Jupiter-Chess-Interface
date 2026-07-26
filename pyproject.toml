@@ -14,10 +14,10 @@ dependencies = [
 
 [tool.setuptools]
 package-dir = {"" = "build"}
-packages = ["libchess"]
+packages = ["libjupiter"]
 
 [tool.setuptools.package-data]
-libchess = ["*.so", "*.pyd"]
+libjupiter = ["*.so", "*.pyd"]
 
 [tool.fastapi]
 entrypoint = "server.main:app"
