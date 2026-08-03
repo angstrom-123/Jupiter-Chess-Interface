@@ -1,7 +1,8 @@
 #include "transpositionTable.h"
 #include <cstring>
 
-TranspositionTable::TranspositionTable()
+TranspositionTable::TranspositionTable(Zobrist& zobrist)
+    : m_Zobrist{zobrist}
 {
     m_Table = new TableEntry[TRANSPOSITION_TABLE_SIZE];
     std::memset(m_Table, 0, TRANSPOSITION_TABLE_SIZE * sizeof(TableEntry));

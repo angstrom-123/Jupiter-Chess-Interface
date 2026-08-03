@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jupiter Client</title>
+    <link rel="stylesheet" href="assets/replay.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="side-bar">
+            <a href="/">Jupiter Client</a>
+            <a href="/">Play</a>
+            <a href="/replay">Load</a>
+            <a href="https://github.com/angstrom-123/Chess-Engine">GitHub</a>
+        </div>
+        <div class="content">
+            <div id="click-cover" class="click-cover"></div>
+            <div class="cards-parent">
+                <div id="setup-game-menu" class="popup-menu">
+                    <div class="heading-container">
+                        <p>Load Game</p>
+                    </div>
+                    <div class="body-container">
+                        <label>Select Jupiter Game File</label>
+                        <input type="file" id="file-input" accept=".jupiter.json">
+                        <hr>
+                        <div class="controls-container" id="controls">
+                            <div class="player-card">
+                                <div class="image-container">
+                                    <img src="assets/sprites/b_pawn_svg_NoShadow.svg" alt="White" style="filter: invert(1);">
+                                </div>
+                                <div class="description-container">
+                                    <p id="w-name">Player Name</p>
+                                    <p id="w-type">Human</p>
+                                </div>
+                            </div>
+                            <div class="player-card">
+                                <div class="image-container">
+                                    <img src="assets/sprites/b_pawn_svg_NoShadow.svg" alt="Black">
+                                </div>
+                                <div class="description-container">
+                                    <p id="b-name">Player Name</p>
+                                    <p id="b-type">Human</p>
+                                </div>
+                            </div>
+                            <div class="button-container">
+                                <div>
+                                    <button title="Flip Board" id="flip-board"><img src="assets/icons/repeat.png" alt="Flip board" style="transform: rotate(90deg); width: 75%;"></button>
+                                    <button title="Copy FEN" id="fen"><img src="assets/icons/copy.png" alt="Copy FEN" style="width: 75%;"></button>
+                                </div>
+                                <div>
+                                    <button title="To Start" id="to-start"><img src="assets/icons/right.png" alt="To Start" style="transform: rotate(180deg); width: 100%;"></button>
+                                    <button title="Step Back" id="step-back"><img src="assets/icons/arrow.png" alt="Step forward" style="transform: rotate(90deg); width: 58%;"></button>
+                                    <button title="Step Forward" id="step-forward"><img src="assets/icons/arrow.png" alt="Step back" style="transform: rotate(-90deg); width: 58%;"></button>
+                                    <button title="To End" id="to-end"><img src="assets/icons/right.png" alt="To Start" style="width: 100%;"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="loading-menu" class="loading-menu">
+                    <p>Loading...</p>
+                </div>
+            </div>
+            <div class="board-container">
+                <div id="fen-menu" class="promotion-container">
+                    <div class="fen-menu">
+                        <button class="close-button" id="close-fen"><img src="assets/icons/close.png" alt="Close" style="width: 100%;"></button>
+                        <p>Current Position FEN</p>
+                        <div>
+                            <span id="fen-span"></span>
+                            <button title="Copy to Clipboard" id="copy-fen"><img src="assets/icons/copy.png" alt="Copy" style="width: 80%;"></button>
+                        </div>
+                    </div>
+                </div>
+                <canvas id="board-canvas" class="board-canvas"></canvas>
+                <canvas id="sprite-canvas" class="sprite-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    </div>
+</body>
+<script type="module" src="assets/dist/replay.mjs" defer></script>
+</html>

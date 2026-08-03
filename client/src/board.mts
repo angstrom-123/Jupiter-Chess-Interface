@@ -1,941 +1,551 @@
-import * as movegen from "./moves.mjs";
-
-export const BOARD_SIZE = 8;
-export const PIECE_SCALE = 0.73;
-export const ROOK_SCALE = 0.68;
-export const LIGHT_SQUARE_HEX = "#d4c49e";
-export const LIGHT_SQUARE_HIGHLIGHT_HEX = "#c35858";
-export const LIGHT_SQUARE_SELECTED_HEX = "#fffd83";
-export const DARK_SQUARE_HEX = "#8a6c45";
-export const DARK_SQUARE_HIGHLIGHT_HEX = "#a34636";
-export const DARK_SQUARE_SELECTED_HEX = "#fffd83";
-
-export type OctalDigit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
-
-export const Colors = ["none", "white", "black"] as const;
-export type Color = (typeof Colors)[number];
-
-export const Pieces = [" ", "P", "p", "N", "n", "B", "b", "R", "r", "Q", "q", "K", "k"] as const;
-export type Piece = (typeof Pieces)[number];
+import {
+    BoardController,
+    Color,
+    invalidPiece,
+    oppositeColor,
+    Piece,
+    showColor,
+} from "./boardController.mjs";
+import { BoardRenderer } from "./boardRenderer.mjs";
+import { api } from "./api.mjs";
+import { Move } from "./move.mjs";
+import { CountdownTimer, type TimerDisplay } from "./countdown.mjs";
+import type { Square } from "./boardState.mjs";
+import { humanReadableId } from "./readableId.mjs";
 
 export const TimeControls = ["0:30", "1", "5", "10", "1+1", "5+5", "10+10"] as const;
 export type TimeControl = (typeof TimeControls)[number];
+export interface TimeControlInfo {
+    time: number;
+    increment: number;
+}
+export const timeControlLookup: Map<TimeControl, TimeControlInfo> = new Map<
+    TimeControl,
+    TimeControlInfo
+>([
+    ["0:30", { time: 30, increment: 0 }],
+    ["1", { time: 60, increment: 0 }],
+    ["5", { time: 300, increment: 0 }],
+    ["10", { time: 600, increment: 0 }],
+    ["1+1", { time: 60, increment: 1 }],
+    ["5+5", { time: 300, increment: 5 }],
+    ["10+10", { time: 600, increment: 10 }],
+]);
 
-export function getTimeControl(timeControl: TimeControl): [number, number] {
-    switch (timeControl) {
-        case "0:30":
-            return [30, 0];
-        case "1":
-            return [60, 0];
-        case "5":
-            return [300, 0];
-        case "5":
-            return [300, 0];
-        case "1+1":
-            return [60, 1];
-        case "5+5":
-            return [300, 5];
-        case "10+10":
-            return [600, 10];
-        default:
-            throw new Error("Bad time control");
-    }
+export enum GameOverReason {
+    NONE,
+    TIMEOUT,
+    CHECKMATE,
+    STALEMATE,
+    REPETITION,
+    FIFTY_MOVE_RULE,
+    RESIGNATION,
 }
 
-export class Square {
-    public x: OctalDigit;
-    public y: OctalDigit;
-
-    constructor(x: OctalDigit, y: OctalDigit) {
-        this.x = x;
-        this.y = y;
-    }
-
-    static fromIndex(index: number): Square {
-        return new Square((index % 8) as OctalDigit, Math.floor(index / 8) as OctalDigit);
-    }
-
-    public asIndex(): number {
-        return this.y * BOARD_SIZE + this.x;
-    }
-
-    public equals(square: Square): boolean {
-        return square.x === this.x && square.y === this.y;
-    }
+export interface PlayerInfo {
+    name: string;
+    isHuman: boolean;
 }
 
-export class MoveData {
-    public from: number;
-    public to: number;
-    public piece: Piece;
-    public capture: Piece;
-    public enPassantSquare: number;
-    public whiteCanCastleLong: boolean;
-    public whiteCanCastleShort: boolean;
-    public blackCanCastleLong: boolean;
-    public blackCanCastleShort: boolean;
-    public whiteTurn: boolean;
-    public isCastles: boolean;
-    public isPromotion: boolean;
-
-    private boardFlipped: boolean;
-    private promotedTo: Piece = " ";
-
-    public toLan(): string {
-        var fromCol: number = this.from % BOARD_SIZE;
-        var fromRow: number = 7 - Math.floor(this.from / BOARD_SIZE);
-        var toCol: number = this.to % BOARD_SIZE;
-        var toRow: number = 7 - Math.floor(this.to / BOARD_SIZE);
-
-        if (this.boardFlipped) {
-            fromCol = 7 - fromCol;
-            fromRow = 7 - fromRow;
-            toCol = 7 - toCol;
-            toRow = 7 - toRow;
-        }
-
-        const fromColChar: string = String.fromCharCode("a".charCodeAt(0) + fromCol);
-        const fromRowChar: string = String.fromCharCode("1".charCodeAt(0) + fromRow);
-        const toColChar: string = String.fromCharCode("a".charCodeAt(0) + toCol);
-        const toRowChar: string = String.fromCharCode("1".charCodeAt(0) + toRow);
-
-        var lan: string = fromColChar + fromRowChar + toColChar + toRowChar;
-        if (this.isPromotion) lan += this.promotedTo;
-
-        return lan;
-    }
-
-    public setPromotion(piece: Piece) {
-        this.promotedTo = piece;
-    }
-
-    constructor(from: number, to: number, board: Board) {
-        this.from = from;
-        this.to = to;
-        this.piece = board.squares[from]! as Piece;
-        this.capture = board.squares[to]! as Piece;
-        this.enPassantSquare = board.enPassantSquare;
-        this.whiteCanCastleLong = board.whiteCanCastleLong;
-        this.whiteCanCastleShort = board.whiteCanCastleShort;
-        this.blackCanCastleLong = board.blackCanCastleLong;
-        this.blackCanCastleShort = board.blackCanCastleShort;
-        this.whiteTurn = board.whiteTurn;
-        this.isCastles = (this.piece === "k" || this.piece === "K") && Math.abs(from - to) === 2;
-        this.isPromotion = (this.piece === "p" || this.piece === "P") && (to < 8 || to > 55);
-
-        this.boardFlipped = board.boardFlipped;
-    }
-}
-
-export function sameColor(piece0: Piece, piece1: Piece) {
-    return isWhite(piece0) === isWhite(piece1);
-}
-
-export function isWhite(piece: Piece) {
-    return piece.charCodeAt(0) < 91;
-}
-
-export interface BoardStartInfo {
-    whitePlayer: string;
-    blackPlayer: string;
+export interface GameInfo {
+    whitePlayer: PlayerInfo;
+    blackPlayer: PlayerInfo;
     timeControl: TimeControl;
-    flipBoard: boolean;
-    getMoveApiCall: (timeLeftMs: number) => Promise<string>;
-    makeMoveApiCall: (moveLan: string) => Promise<void>;
+}
+
+export interface GameDownload {
+    startFen: string;
+    moves: string[];
+    whitePlayer: PlayerInfo;
+    blackPlayer: PlayerInfo;
 }
 
 export class Board {
-    public squares: Piece[];
-    public attacks: boolean[][];
-    public boardFlipped: boolean = false;
-    public enPassantSquare: number = -1;
-    public whiteCanCastleLong: boolean = true;
-    public whiteCanCastleShort: boolean = true;
-    public blackCanCastleLong: boolean = true;
-    public blackCanCastleShort: boolean = true;
-    public whiteTurn: boolean = true;
-    public whitePlayer: string = "";
-    public blackPlayer: string = "";
+    private controller: BoardController;
+    private renderer: BoardRenderer;
 
-    private started: boolean = false;
-    private waitForStart: boolean = false;
-    private selectedSquare: Square | null = null;
-    private draggingPiece: boolean = false;
-    private hideSprite: number = -1;
-    private sprites: Map<Piece, HTMLImageElement>;
-    private spritesLoaded: boolean = false;
-    private promotion: MoveData | null = null;
-    private promotionMenu: HTMLDivElement;
-    private promoteKnightButton: HTMLButtonElement;
-    private promoteBishopButton: HTMLButtonElement;
-    private promoteRookButton: HTMLButtonElement;
-    private promoteQueenButton: HTMLButtonElement;
+    private gameInfo: GameInfo | undefined;
+    private selected: number = -1;
+    private isDragging: boolean = false;
+    private awaitingGameStart: boolean = false;
+    private initialised: boolean = false;
+    private resignConfirmActive: boolean = false;
+
+    private whiteTimer: CountdownTimer | undefined;
+    private blackTimer: CountdownTimer | undefined;
+
+    private setupForm: HTMLFormElement | undefined = undefined;
+    private setupMenu: HTMLDivElement | undefined = undefined;
+
+    private clickCover: HTMLDivElement;
     private boardCanvas: HTMLCanvasElement;
     private spriteCanvas: HTMLCanvasElement;
-    private boardCtx: CanvasRenderingContext2D;
-    private spriteCtx: CanvasRenderingContext2D;
-    private getMoveApiCall: ((timeLeftMs: number) => Promise<string>) | undefined = undefined;
-    private makeMoveApiCall: ((moveLan: string) => Promise<void>) | undefined = undefined;
 
-    public friendlyTimer: CountdownTimer | null = null;
-    public opponentTimer: CountdownTimer | null = null;
+    private promotionMenu: HTMLDivElement;
+    private knightButton: HTMLButtonElement;
+    private bishopButton: HTMLButtonElement;
+    private rookButton: HTMLButtonElement;
+    private queenButton: HTMLButtonElement;
 
-    constructor() {
-        this.squares = new Array<Piece>(64) as Piece[];
-        this.attacks = [new Array<boolean>(64), new Array<boolean>(64)];
-        this.sprites = new Map<Piece, HTMLImageElement>();
+    private fenMenu: HTMLDivElement;
+    private flipButton: HTMLButtonElement;
+    private resignButton: HTMLButtonElement;
+    private confirmResignSpan: HTMLSpanElement;
+    private resignIcon: HTMLImageElement;
+    private fenButton: HTMLButtonElement;
+    private copyFenButton: HTMLButtonElement;
+    private closeFenButton: HTMLButtonElement;
+    private fenSpan: HTMLSpanElement;
 
-        this.promotionMenu = document.getElementById("promotion-menu") as HTMLDivElement;
-        this.promoteKnightButton = document.getElementById("promote-knight") as HTMLButtonElement;
-        this.promoteBishopButton = document.getElementById("promote-bishop") as HTMLButtonElement;
-        this.promoteRookButton = document.getElementById("promote-rook") as HTMLButtonElement;
-        this.promoteQueenButton = document.getElementById("promote-queen") as HTMLButtonElement;
+    private gameOverMenu: HTMLDivElement;
+    private gameOverSpan: HTMLSpanElement;
+    private downloadGameButton: HTMLButtonElement;
+    private gameOverOkButton: HTMLButtonElement;
+    private gameOverCanvas: HTMLCanvasElement;
+    private gameOverSpriteCanvas: HTMLCanvasElement;
+
+    constructor(fen: string) {
+        this.clickCover = document.getElementById("click-cover")! as HTMLDivElement;
         this.boardCanvas = document.getElementById("board-canvas")! as HTMLCanvasElement;
         this.spriteCanvas = document.getElementById("sprite-canvas")! as HTMLCanvasElement;
 
-        const boardContext: CanvasRenderingContext2D | null = this.boardCanvas.getContext("2d");
-        const spriteContext: CanvasRenderingContext2D | null = this.spriteCanvas.getContext("2d");
-        if (boardContext === null || spriteContext === null) {
-            throw new Error(
-                "Could not obtain rendering context for board canvas nor sprite canvas",
-            );
-        }
-        this.boardCtx = boardContext;
-        this.spriteCtx = spriteContext;
+        this.spriteCanvas.addEventListener("mousedown", async (e) => await this.onMouseDown(e));
+        this.spriteCanvas.addEventListener("mouseup", async (e) => await this.onMouseUp(e));
+        this.spriteCanvas.addEventListener("mousemove", async (e) => await this.onMouseMove(e));
 
-        this.spriteCanvas.addEventListener("mousedown", (e) => this.onMouseDown(e));
-        this.spriteCanvas.addEventListener("mouseup", (e) => this.onMouseUp(e));
-        this.spriteCanvas.addEventListener("mousemove", (e) => this.onMouseMove(e));
-        this.spriteCanvas.addEventListener("mouseleave", (e) => this.onMouseLeave(e));
-        this.promoteKnightButton.addEventListener("click", async (e) => this.onPromote(e, "n"));
-        this.promoteBishopButton.addEventListener("click", async (e) => this.onPromote(e, "b"));
-        this.promoteRookButton.addEventListener("click", async (e) => this.onPromote(e, "r"));
-        this.promoteQueenButton.addEventListener("click", async (e) => this.onPromote(e, "q"));
-    }
+        this.promotionMenu = document.getElementById("promotion-menu")! as HTMLDivElement;
+        this.knightButton = document.getElementById("promote-knight")! as HTMLButtonElement;
+        this.bishopButton = document.getElementById("promote-bishop")! as HTMLButtonElement;
+        this.rookButton = document.getElementById("promote-rook")! as HTMLButtonElement;
+        this.queenButton = document.getElementById("promote-queen")! as HTMLButtonElement;
 
-    public async init(squares: Piece[]) {
-        this.squares = squares;
-        this.drawBoard();
-        await this.loadSprites();
-    }
+        this.fenMenu = document.getElementById("fen-menu")! as HTMLDivElement;
+        this.flipButton = document.getElementById("flip-board")! as HTMLButtonElement;
+        this.resignButton = document.getElementById("resign")! as HTMLButtonElement;
+        this.confirmResignSpan = document.getElementById("confirm-resign")! as HTMLSpanElement;
+        this.resignIcon = document.getElementById("resign-icon")! as HTMLImageElement;
+        this.fenButton = document.getElementById("fen")! as HTMLButtonElement;
+        this.copyFenButton = document.getElementById("copy-fen")! as HTMLButtonElement;
+        this.closeFenButton = document.getElementById("close-fen")! as HTMLButtonElement;
+        this.fenSpan = document.getElementById("fen-span")! as HTMLSpanElement;
 
-    public async start({
-        whitePlayer,
-        blackPlayer,
-        timeControl,
-        flipBoard,
-        getMoveApiCall,
-        makeMoveApiCall,
-    }: BoardStartInfo) {
-        this.whitePlayer = whitePlayer;
-        this.blackPlayer = blackPlayer;
-        this.boardFlipped = flipBoard;
-        this.getMoveApiCall = getMoveApiCall;
-        this.makeMoveApiCall = makeMoveApiCall;
-
-        const [time, increment] = getTimeControl(timeControl);
-
-        this.friendlyTimer = new CountdownTimer(
-            time * 1000,
-            increment * 1000,
-            10,
-            document.getElementById("friendly-timer")!,
+        this.flipButton.addEventListener("click", (_e) => this.flip());
+        this.resignButton.addEventListener("click", (_e) => this.resign());
+        this.fenButton.addEventListener("click", (_e) => this.showFen());
+        this.copyFenButton.addEventListener("click", (_e) =>
+            navigator.clipboard.writeText(this.controller.getFen()),
         );
-        this.opponentTimer = new CountdownTimer(
-            time * 1000,
-            increment * 1000,
-            10,
-            document.getElementById("opponent-timer")!,
-        );
-        this.whiteTurn = true;
+        this.closeFenButton.addEventListener("click", (_e) => {
+            this.clickCover.style.display = "none";
+            this.fenMenu.style.display = "none";
+        });
 
-        if (this.boardFlipped) {
-            // Flip array
-            const newSquares: Piece[] = new Array(64);
-            for (let y = 0; y < BOARD_SIZE; y++) {
-                const sourceY = BOARD_SIZE - y - 1;
+        this.gameOverMenu = document.getElementById("game-over-menu")! as HTMLDivElement;
+        this.gameOverSpan = document.getElementById("game-over-span")! as HTMLSpanElement;
+        this.downloadGameButton = document.getElementById("download-game")! as HTMLButtonElement;
+        this.gameOverOkButton = document.getElementById("game-over-ok")! as HTMLButtonElement;
+        this.gameOverCanvas = document.getElementById("mini-board-canvas")! as HTMLCanvasElement;
+        this.gameOverSpriteCanvas = document.getElementById(
+            "mini-sprite-canvas",
+        )! as HTMLCanvasElement;
 
-                for (let x = 0; x < BOARD_SIZE; x++) {
-                    newSquares[y * 8 + (7 - x)] = this.squares[sourceY * 8 + x]!;
-                }
-            }
+        this.controller = new BoardController(fen);
+        this.renderer = new BoardRenderer(this.boardCanvas, this.spriteCanvas);
+        this.renderer.drawBoard();
+    }
 
-            this.squares = newSquares;
-        }
+    public async load() {
+        await this.renderer.loadSprites();
+        this.renderer.drawPieces(this.controller.getState());
+    }
 
-        this.drawBoard(); // Need to redraw in case playing as black (needs flip)
-        this.drawPieces();
+    public async init(gameInfo: GameInfo) {
+        this.gameInfo = gameInfo;
 
-        if (this.whitePlayer === "Local") {
-            this.waitForStart = true;
+        const { time, increment } = timeControlLookup.get(this.gameInfo.timeControl)!;
+        this.whiteTimer = new CountdownTimer({
+            title: this.gameInfo.whitePlayer.name,
+            from: time,
+            increment: increment,
+            display: {
+                title: document.getElementById("friendly-label")! as HTMLParagraphElement,
+                time: document.getElementById("friendly-timer")! as HTMLSpanElement,
+                container: document.getElementById("friendly-card")! as HTMLDivElement,
+            },
+            onTimeout: async () => await this.gameOver(GameOverReason.TIMEOUT),
+        });
+        this.blackTimer = new CountdownTimer({
+            title: this.gameInfo.blackPlayer.name,
+            from: time,
+            increment: increment,
+            display: {
+                title: document.getElementById("opponent-label")! as HTMLParagraphElement,
+                time: document.getElementById("opponent-timer")! as HTMLSpanElement,
+                container: document.getElementById("opponent-card")! as HTMLDivElement,
+            },
+            onTimeout: async () => await this.gameOver(GameOverReason.TIMEOUT),
+        });
+
+        this.initialised = true;
+
+        if (this.gameInfo.whitePlayer.isHuman) {
+            this.awaitingGameStart = true;
         } else {
-            this.startGame();
-            const move: string = await this.getMoveApiCall(
-                !this.boardFlipped ? this.friendlyTimer.getMs() : this.opponentTimer.getMs(),
-            );
-            await this.applyMoveLan(move);
+            this.countdownTurn();
+            await this.engineMove();
         }
     }
 
-    public getRemainingMs(): number {
-        if (this.friendlyTimer === null || this.opponentTimer === null)
-            throw new Error("Getting remaining time for uninitialized timers");
-
-        if ((this.whiteTurn && !this.boardFlipped) || (!this.whiteTurn && this.boardFlipped))
-            return this.friendlyTimer.getMs();
-        return this.opponentTimer.getMs();
+    public setForm(form: HTMLFormElement, menu: HTMLDivElement) {
+        this.setupForm = form;
+        this.setupMenu = menu;
     }
 
-    public async applyMoveLan(lan: string) {
-        if (this.makeMoveApiCall === undefined)
-            throw new Error("Make Move API Call must be defined");
+    private flip() {
+        console.log("Flipping");
 
-        await this.makeMoveApiCall(lan);
-        const [from, to, promote] = this.parseLAN(lan);
-        const moveData: MoveData = this.makeMove(from, to);
-        switch (promote) {
-            case "n":
-                this.squares[to.asIndex()] = moveData.whiteTurn ? "N" : "n";
-            case "b":
-                this.squares[to.asIndex()] = moveData.whiteTurn ? "B" : "b";
-            case "r":
-                this.squares[to.asIndex()] = moveData.whiteTurn ? "R" : "r";
-            case "q":
-                this.squares[to.asIndex()] = moveData.whiteTurn ? "Q" : "q";
-        }
-        this.updateAttacks();
-        await this.updateGame();
-    }
-
-    public makeMove(from: Square, to: Square): MoveData {
-        const fromIndex: number = from.asIndex();
-        const toIndex: number = to.asIndex();
-        const piece: Piece = this.squares[fromIndex]!;
-
-        const moveData: MoveData = new MoveData(fromIndex, toIndex, this);
-
-        // En Passant
-        if (piece === "p" || piece === "P") {
-            if (toIndex === this.enPassantSquare) {
-                if (
-                    (!isWhite(piece) && !this.boardFlipped) ||
-                    (isWhite(piece) && this.boardFlipped)
-                ) {
-                    this.squares[this.enPassantSquare - BOARD_SIZE] = " ";
-                } else {
-                    this.squares[this.enPassantSquare + BOARD_SIZE] = " ";
-                }
-            }
-
-            if (Math.abs(fromIndex - toIndex) === 2 * BOARD_SIZE) {
-                this.enPassantSquare = (fromIndex + toIndex) / 2;
-            } else {
-                this.enPassantSquare = -1;
-            }
-        } else {
-            this.enPassantSquare = -1;
-        }
-
-        // Castling
-        if ((piece === "k" || piece === "K") && Math.abs(fromIndex - toIndex) === 2) {
-            if (fromIndex > toIndex) {
-                // Castle long
-                const rookIndex = fromIndex - (this.boardFlipped ? 3 : 4);
-                this.squares[toIndex + 1] = this.squares[rookIndex]!;
-                this.squares[rookIndex] = " ";
-            } else {
-                // Castle short
-                const rookIndex = fromIndex + (this.boardFlipped ? 4 : 3);
-                this.squares[toIndex - 1] = this.squares[rookIndex]!;
-                this.squares[rookIndex] = " ";
-            }
-        }
-
-        // Castling rights
-        {
-            // King moved
-            if (piece === "k") {
-                this.blackCanCastleLong = false;
-                this.blackCanCastleShort = false;
-            } else if (piece === "K") {
-                this.whiteCanCastleLong = false;
-                this.whiteCanCastleShort = false;
-            }
-
-            // Rook moved
-            if (piece === "r") {
-                if (fromIndex === 0 || fromIndex === 56) this.blackCanCastleLong = false;
-                else if (fromIndex === 7 || fromIndex === 63) this.blackCanCastleShort = false;
-            } else if (piece === "R") {
-                if (fromIndex === 0 || fromIndex === 56) this.whiteCanCastleLong = false;
-                else if (fromIndex === 7 || fromIndex === 63) this.whiteCanCastleShort = false;
-            }
-
-            // Rook captured
-            if ((!this.boardFlipped && toIndex === 56) || (this.boardFlipped && toIndex === 0))
-                this.whiteCanCastleLong = false;
-            if ((!this.boardFlipped && toIndex === 63) || (this.boardFlipped && toIndex === 7))
-                this.whiteCanCastleShort = false;
-            if ((!this.boardFlipped && toIndex === 0) || (this.boardFlipped && toIndex === 56))
-                this.blackCanCastleLong = false;
-            if ((!this.boardFlipped && toIndex === 7) || (this.boardFlipped && toIndex === 63))
-                this.blackCanCastleShort = false;
-        }
-
-        // Board
-        this.squares[toIndex] = piece;
-        this.squares[fromIndex] = " ";
-
-        // Turn
-        this.whiteTurn = !this.whiteTurn;
-
-        return moveData;
-    }
-
-    public unmakeMove(moveData: MoveData) {
-        // En Passant
-        const piece: Piece = moveData.piece;
-        const capture: Piece = moveData.capture;
-        const fromIndex: number = moveData.from;
-        const toIndex: number = moveData.to;
-
-        if ((piece === "p" || piece === "P") && toIndex === moveData.enPassantSquare) {
-            if ((!isWhite(piece) && !this.boardFlipped) || (isWhite(piece) && this.boardFlipped)) {
-                this.squares[moveData.enPassantSquare - BOARD_SIZE] = isWhite(moveData.piece)
-                    ? "p"
-                    : "P";
-            } else {
-                this.squares[moveData.enPassantSquare + BOARD_SIZE] = isWhite(moveData.piece)
-                    ? "p"
-                    : "P";
-            }
-        }
-        this.enPassantSquare = moveData.enPassantSquare;
-
-        // Castling
-        if ((piece === "k" || piece === "K") && Math.abs(fromIndex - toIndex) === 2) {
-            if (fromIndex > toIndex) {
-                this.squares[fromIndex - (this.boardFlipped ? 3 : 4)] = isWhite(piece) ? "R" : "r";
-                this.squares[fromIndex - 1] = " ";
-            } else {
-                this.squares[fromIndex + (this.boardFlipped ? 4 : 3)] = isWhite(piece) ? "R" : "r";
-                this.squares[fromIndex + 1] = " ";
-            }
-        }
-        this.whiteCanCastleLong = moveData.whiteCanCastleLong;
-        this.whiteCanCastleShort = moveData.whiteCanCastleShort;
-        this.blackCanCastleLong = moveData.blackCanCastleLong;
-        this.blackCanCastleShort = moveData.blackCanCastleShort;
-
-        // Board
-        this.squares[fromIndex] = piece;
-        this.squares[toIndex] = capture;
-
-        // Turn
-        this.whiteTurn = moveData.whiteTurn;
-    }
-
-    public promote(moveData: MoveData) {
-        this.promotion = moveData;
-        this.promotionMenu.style.display = "inline";
-    }
-
-    public updateAttacks() {
-        this.attacks[0] = this.getAllAttacks("white");
-        this.attacks[1] = this.getAllAttacks("black");
-    }
-
-    public async updateGame() {
-        if (this.getMoveApiCall === undefined) throw new Error("Get move API call must be defined");
-
-        if ((this.whiteTurn && !this.boardFlipped) || (!this.whiteTurn && this.boardFlipped)) {
-            this.friendlyTimer!.start();
-            this.opponentTimer!.stop();
-        } else {
-            this.friendlyTimer!.stop();
-            this.opponentTimer!.start();
-        }
-
-        this.drawPieces();
-
-        // Get engine move now if required
-        if (this.whiteTurn && this.whitePlayer !== "Local") {
-            const moveLan: string = await this.getMoveApiCall(
-                !this.boardFlipped ? this.friendlyTimer!.getMs() : this.opponentTimer!.getMs(),
-            );
-            await this.applyMoveLan(moveLan);
-            this.drawPieces();
-        } else if (!this.whiteTurn && this.blackPlayer !== "Local") {
-            const moveLan: string = await this.getMoveApiCall(
-                !this.boardFlipped ? this.opponentTimer!.getMs() : this.friendlyTimer!.getMs(),
-            );
-            await this.applyMoveLan(moveLan);
-            this.drawPieces();
-        }
-    }
-
-    public getAllAttacks(color: Color) {
-        var allAttacks: boolean[] = new Array<boolean>(64);
-        for (let i: number = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
-            if (
-                this.squares[i] === " " ||
-                isWhite(this.squares[i] as Piece) !== (color === "white")
-            ) {
-                continue;
-            }
-
-            const attacks: number[] = movegen.getAttacks(this, i);
-            for (const attack of attacks) {
-                allAttacks[attack]! = true;
-            }
-        }
-        return allAttacks;
-    }
-
-    private startGame() {
-        this.started = true;
-        this.waitForStart = false;
-        if (!this.boardFlipped) {
-            this.friendlyTimer!.start();
-        } else {
-            this.opponentTimer!.start();
-        }
-    }
-
-    private parseLAN(lan: string): [Square, Square, Piece | undefined] {
-        const fromCol: number = lan.charCodeAt(0);
-        const fromRow: number = lan.charCodeAt(1);
-        const toCol: number = lan.charCodeAt(2);
-        const toRow: number = lan.charCodeAt(3);
-        const promotion: Piece | undefined =
-            lan.length === 5 ? (lan.charAt(4) as Piece) : undefined;
-
-        var fromSquare: Square = new Square(
-            (fromCol - "a".charCodeAt(0)) as OctalDigit,
-            (7 - (fromRow - "1".charCodeAt(0))) as OctalDigit,
-        );
-        var toSquare: Square = new Square(
-            (toCol - "a".charCodeAt(0)) as OctalDigit,
-            (7 - (toRow - "1".charCodeAt(0))) as OctalDigit,
-        );
-
-        if (this.boardFlipped) {
-            fromSquare.x = (7 - fromSquare.x) as OctalDigit;
-            fromSquare.y = (7 - fromSquare.y) as OctalDigit;
-            toSquare.x = (7 - toSquare.x) as OctalDigit;
-            toSquare.y = (7 - toSquare.y) as OctalDigit;
-        }
-
-        return [fromSquare, toSquare, promotion];
-    }
-
-    private async loadSprites() {
-        async function loadSprite(url: string): Promise<HTMLImageElement> {
-            // Inject missing fields for chrome
-            const response: Response = await fetch(url);
-            const rawSvg: string = await response.text();
-
-            const parser: DOMParser = new DOMParser();
-            const doc: Document = parser.parseFromString(rawSvg, "image/svg+xml");
-            const svgElement: HTMLElement = doc.documentElement;
-
-            const w: string = svgElement.getAttribute("width")?.replace("px", "") || "100";
-            const h: string = svgElement.getAttribute("height")?.replace("px", "") || "100";
-
-            if (!svgElement.getAttribute("viewbox")) {
-                svgElement.setAttribute("viewbox", `0 0 ${w} ${h}`);
-            }
-            svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
-            svgElement.setAttribute("width", w);
-            svgElement.setAttribute("height", h);
-
-            const serialized: string = new XMLSerializer().serializeToString(doc);
-            const blob: Blob = new Blob([serialized], { type: "image/svg+xml" });
-            const blobUrl: string = URL.createObjectURL(blob);
-
-            // Load
-            return new Promise((res, rej) => {
-                const svg: HTMLImageElement = new Image();
-                svg.onload = () => {
-                    // Set these for chrome
-                    svg.width = parseInt(w);
-                    svg.height = parseInt(h);
-                    svg.style.width = "100%";
-                    svg.style.height = "auto";
-                    svg.style.aspectRatio = `${svg.naturalWidth} / ${svg.naturalHeight}`;
-
-                    // Clean up
-                    URL.revokeObjectURL(blobUrl);
-                    res(svg);
-                };
-                svg.onerror = () => rej(new Error(`Failed to load svg: ${url}`));
-                svg.crossOrigin = "anonymous";
-                svg.src = blobUrl;
-            });
-        }
-
-        // NOTE: Throws an error on failure - Use some fallbacks maybe?
-        this.sprites.set("p", await loadSprite("./assets/sprites/b_pawn_svg_NoShadow.svg"));
-        this.sprites.set("n", await loadSprite("./assets/sprites/b_knight_svg_NoShadow.svg"));
-        this.sprites.set("b", await loadSprite("./assets/sprites/b_bishop_svg_NoShadow.svg"));
-        this.sprites.set("r", await loadSprite("./assets/sprites/b_rook_svg_NoShadow.svg"));
-        this.sprites.set("q", await loadSprite("./assets/sprites/b_queen_svg_NoShadow.svg"));
-        this.sprites.set("k", await loadSprite("./assets/sprites/b_king_svg_NoShadow.svg"));
-
-        console.log("Sprites loaded successfully");
-        this.spritesLoaded = true;
-    }
-
-    private drawSpriteAt(piece: Piece, x: OctalDigit, y: OctalDigit) {
-        if (!this.spritesLoaded) {
-            console.warn("Requested sprite draw but not finished loading");
+        if (!this.gameInfo) {
+            console.warn("Can only flip board once game has been set up");
             return;
         }
 
-        const sprite = this.sprites.get(piece.toLowerCase() as Piece)!;
-        const squareSize = this.spriteCanvas.width / BOARD_SIZE;
+        this.renderer.flipBoard();
+        this.renderer.drawBoard();
+        this.renderer.drawPieces(this.controller.getState());
 
-        // The rook sprites are a little larger than I would've liked.
-        const pieceScale = piece === "r" || piece === "R" ? ROOK_SCALE : PIECE_SCALE;
-        const pieceSize = squareSize * pieceScale;
-
-        const new_x = x - pieceSize / 2;
-        const new_y = y - pieceSize / 2;
-
-        // We only load black sprites and then invert colors for white to avoid loading extra
-        if (piece !== piece.toLowerCase() || piece === piece.toUpperCase()) {
-            this.spriteCtx.filter = "invert(1)";
-        }
-
-        this.spriteCtx.drawImage(sprite, new_x, new_y, pieceSize, pieceSize);
-        this.spriteCtx.filter = "none";
+        let tmp: TimerDisplay = this.whiteTimer!.getDisplay();
+        this.whiteTimer!.setDisplay(this.blackTimer!.getDisplay());
+        this.blackTimer!.setDisplay(tmp);
     }
 
-    private async onPromote(_e: MouseEvent, piece: Piece) {
-        const square: number = this.promotion!.to;
-        this.squares[this.promotion!.to] = isWhite(this.squares[square]!)
-            ? (piece.toUpperCase() as Piece)
-            : (piece.toLowerCase() as Piece);
+    private async resign() {
+        if (this.resignConfirmActive) await this.gameOver(GameOverReason.RESIGNATION);
 
-        this.drawPieces();
+        // Only the human can resign
+        const turn = this.controller.getState().turn;
+        if (turn === Color.WHITE && !this.gameInfo!.whitePlayer.isHuman) return;
 
-        this.promotion!.setPromotion(piece);
-        await this.makeMoveApiCall!(this.promotion!.toLan());
-        this.updateAttacks();
+        if (turn === Color.BLACK && !this.gameInfo!.blackPlayer.isHuman) return;
 
-        this.promotionMenu.style.display = "none";
-        this.promotion = null;
-        await this.updateGame();
+        // Confirm
+        this.resignIcon.style.display = "none";
+        this.confirmResignSpan.innerText = "ok?";
+
+        this.resignConfirmActive = true;
+        setTimeout(() => {
+            this.resignIcon.style.display = "inline";
+            this.confirmResignSpan.innerText = "";
+            this.resignConfirmActive = false;
+        }, 2000);
+    }
+
+    private showFen() {
+        this.fenMenu.style.display = "inline";
+        this.clickCover.style.display = "inline";
+        const text: string = this.controller.getFen();
+        this.fenSpan.innerText = text;
+    }
+
+    private async gameOver(reason: GameOverReason) {
+        this.whiteTimer!.stop();
+        this.blackTimer!.stop();
+
+        requestAnimationFrame(() => {
+            this.renderer.drawBoardTo(this.gameOverCanvas);
+            this.renderer.drawPiecesTo(this.gameOverSpriteCanvas, this.controller.getState());
+        });
+
+        const winner: Color = oppositeColor(this.controller.getState().turn);
+        await this.showGameOverMenu(winner, reason);
+
+        if (!this.setupForm || !this.setupMenu)
+            throw new Error("Setup form or setup menu are not assigned");
+
+        this.initialised = false;
+        this.controller = new BoardController(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        );
+        if (this.renderer.isFlipped()) this.renderer.flipBoard();
+        this.renderer.clearHidden();
+        this.renderer.clearHighlighted();
+        this.renderer.clearSelected();
+        this.renderer.drawBoard();
+        this.renderer.drawPieces(this.controller.getState());
+
+        this.setupMenu.style.display = "inline";
+    }
+
+    private async showGameOverMenu(winner: Color, reason: GameOverReason): Promise<void> {
+        this.clickCover.style.display = "inline";
+        this.gameOverMenu.style.display = "inline";
+
+        switch (reason) {
+            case GameOverReason.TIMEOUT:
+                this.gameOverSpan.innerText = `${showColor(winner)} won by timeout`;
+                break;
+            case GameOverReason.CHECKMATE:
+                this.gameOverSpan.innerText = `${showColor(winner)} won by checkmate`;
+                break;
+            case GameOverReason.STALEMATE:
+                this.gameOverSpan.innerText = `Draw by stalemate`;
+                break;
+            case GameOverReason.REPETITION:
+                this.gameOverSpan.innerText = `Draw by repetition`;
+                break;
+            case GameOverReason.FIFTY_MOVE_RULE:
+                this.gameOverSpan.innerText = `Draw by 50-move rule`;
+                break;
+            case GameOverReason.RESIGNATION:
+                this.gameOverSpan.innerText = `${showColor(winner)} won by resignation`;
+                break;
+        }
+
+        const controller: AbortController = new AbortController();
+        const { signal } = controller;
+
+        return new Promise<void>((res, _rej) => {
+            this.gameOverOkButton.addEventListener(
+                "click",
+                () => {
+                    this.gameOverMenu.style.display = "none";
+                    this.clickCover.style.display = "none";
+                    controller.abort();
+                    res();
+                },
+                { signal },
+            );
+            this.downloadGameButton.addEventListener(
+                "click",
+                () => {
+                    this.downloadGame();
+                    this.gameOverMenu.style.display = "none";
+                    this.clickCover.style.display = "none";
+                    controller.abort();
+                    res();
+                },
+                { signal },
+            );
+        });
+    }
+
+    private downloadGame() {
+        const game: GameDownload = {
+            startFen: this.controller.getStartingFen(),
+            moves: this.controller.getHistory().map((x) => x.toLan()),
+            whitePlayer: this.gameInfo!.whitePlayer,
+            blackPlayer: this.gameInfo!.blackPlayer,
+        };
+
+        const blob: Blob = new Blob([JSON.stringify(game)], { type: "application/json" });
+        const url: string = URL.createObjectURL(blob);
+
+        const link: HTMLAnchorElement = document.createElement("a");
+        link.href = url;
+        link.download = `${humanReadableId()}.jupiter.json`;
+        link.click();
+
+        URL.revokeObjectURL(url);
+    }
+
+    private gameStart() {
+        this.countdownTurn();
+        this.awaitingGameStart = false;
+    }
+
+    private countdownTurn() {
+        if (this.controller.getState().turn === Color.WHITE) {
+            this.blackTimer!.stop();
+            this.whiteTimer!.start();
+        } else {
+            this.whiteTimer!.stop();
+            this.blackTimer!.start();
+        }
+    }
+
+    private async engineMove() {
+        const timeMs: number =
+            this.controller.getState().turn === Color.WHITE
+                ? this.whiteTimer!.getMs()
+                : this.blackTimer!.getMs();
+        const moveLan: string = await api.bestMove(timeMs);
+        const move: Move = Move.fromLan(this.controller.getState(), moveLan);
+        this.controller.makeMove(move);
+
+        this.renderer.drawPieces(this.controller.getState());
+
+        await api.makeMove(moveLan);
+        
+        const reason: GameOverReason = this.controller.isGameOver();
+        if (reason !== GameOverReason.NONE) {
+            await this.gameOver(reason);
+            return
+        }
+
+        this.countdownTurn();
+
+        if (this.isEngineTurn()) await this.engineMove();
     }
 
     private async onMouseDown(e: MouseEvent) {
-        if (this.waitForStart) this.startGame();
-        if (!this.started) return;
+        if (!this.initialised) return;
+
+        if (this.awaitingGameStart) this.gameStart();
+
+        // Check if expecting human input
+        const turn: Color = this.controller.getState().turn;
         if (
-            (this.whiteTurn && this.whitePlayer !== "Local") ||
-            (!this.whiteTurn && this.blackPlayer !== "Local")
-        )
-            return;
-        if (this.makeMoveApiCall === undefined)
-            throw new Error("Make move API call must be defined");
-
-        const targetSquare = new Square(
-            Math.floor((e.offsetX / this.boardCanvas.clientWidth) * BOARD_SIZE) as OctalDigit,
-            Math.floor((e.offsetY / this.boardCanvas.clientHeight) * BOARD_SIZE) as OctalDigit,
-        );
-        const targetPiece = this.squares[targetSquare.asIndex()]!;
-        if (targetPiece !== " " && isWhite(targetPiece) === this.whiteTurn) {
-            this.selectedSquare = targetSquare;
-            this.draggingPiece = true;
-            this.hideSprite = targetSquare.asIndex();
-            this.drawBoard(movegen.getMoves(this, this.selectedSquare.asIndex()));
-        } else if (
-            this.selectedSquare !== null &&
-            !this.draggingPiece &&
-            (targetPiece === " " || isWhite(targetPiece) !== this.whiteTurn)
+            (turn === Color.WHITE && !this.gameInfo!.whitePlayer.isHuman) ||
+            (turn === Color.BLACK && !this.gameInfo!.blackPlayer.isHuman)
         ) {
-            if (
-                movegen
-                    .getMoves(this, this.selectedSquare.asIndex())
-                    .includes(targetSquare.asIndex())
-            ) {
-                const moveData: MoveData = this.makeMove(this.selectedSquare, targetSquare);
-                this.selectedSquare = null;
-                this.drawBoard();
-                this.drawPieces();
+            this.isDragging = false;
+            this.selected = -1;
+            return;
+        }
 
-                if (moveData.isPromotion) {
-                    this.promote(moveData);
-                    // API Call and other stuff handled in the callback (onPromote)
-                } else {
-                    await this.makeMoveApiCall(moveData.toLan());
-                    this.updateAttacks();
-                    await this.updateGame();
+        const target: number = this.renderer.getCoord(e.offsetX, e.offsetY).toIndex();
+        const targetSquare: Square = this.controller.getState().pieces[target]!;
+        if (targetSquare.color === turn) {
+            console.log(`Clicked on square at index ${target}`);
+
+            this.selected = target;
+            this.isDragging = true;
+            this.renderer.setSelected(this.selected);
+            this.renderer.setHidden(this.selected);
+            this.renderer.setHighlighted(this.controller.getMoves(this.selected));
+            this.renderer.drawBoard();
+        } else if (this.selected !== -1) {
+            console.log(`Clicked on target at index ${target}`);
+
+            if (this.controller.getMoves(this.selected).includes(target)) {
+                var promote: Piece = invalidPiece();
+                if (this.isPromotes(target)) promote = await this.getPromotion();
+                const move: Move = new Move(
+                    this.controller.getState(),
+                    this.selected,
+                    target,
+                    promote,
+                );
+                this.controller.makeMove(move);
+
+                this.selected = -1;
+                this.renderer.clearSelected();
+                this.renderer.clearHighlighted();
+                this.renderer.drawBoard();
+                this.renderer.drawPieces(this.controller.getState());
+
+                await api.makeMove(move.toLan());
+
+                const reason: GameOverReason = this.controller.isGameOver();
+                if (reason !== GameOverReason.NONE) {
+                    await this.gameOver(reason);
+                    return
                 }
+                this.countdownTurn();
+
+                if (this.isEngineTurn()) await this.engineMove();
             } else {
-                this.selectedSquare = null;
-                this.drawBoard();
-                this.drawPieces();
+                this.selected = -1;
+                this.renderer.clearSelected();
+                this.renderer.clearHighlighted();
+                this.renderer.drawBoard();
+                this.renderer.drawPieces(this.controller.getState());
             }
         }
     }
 
     private async onMouseUp(e: MouseEvent) {
-        if (!this.started) return;
-        if (
-            (this.whiteTurn && this.whitePlayer !== "Local") ||
-            (!this.whiteTurn && this.blackPlayer !== "Local")
-        )
-            return;
-        if (this.makeMoveApiCall === undefined)
-            throw new Error("Make move API call must be defined");
+        if (!this.initialised) return;
 
-        if (this.draggingPiece) {
-            if (this.selectedSquare === null)
-                throw new Error("Expected selected square to be non-null during mouse up");
+        const target: number = this.renderer.getCoord(e.offsetX, e.offsetY).toIndex();
 
-            const targetSquare = new Square(
-                Math.floor((e.offsetX / this.boardCanvas.clientWidth) * BOARD_SIZE) as OctalDigit,
-                Math.floor((e.offsetY / this.boardCanvas.clientHeight) * BOARD_SIZE) as OctalDigit,
-            );
+        console.log(`Released on target at index ${target}`);
 
-            if (
-                movegen
-                    .getMoves(this, this.selectedSquare.asIndex())
-                    .includes(targetSquare.asIndex())
-            ) {
-                const moveData: MoveData = this.makeMove(this.selectedSquare, targetSquare);
-                if (moveData.isPromotion) this.promote(moveData);
-                await this.makeMoveApiCall(moveData.toLan());
-                this.updateAttacks();
+        if (this.isDragging) {
+            this.isDragging = false;
+            this.renderer.clearHidden();
+            if (this.controller.getMoves(this.selected).includes(target)) {
+                var promote: Piece = invalidPiece();
+                if (this.isPromotes(target)) promote = await this.getPromotion();
+                const move: Move = new Move(
+                    this.controller.getState(),
+                    this.selected,
+                    target,
+                    promote,
+                );
+                this.controller.makeMove(move);
+                await api.makeMove(move.toLan());
 
-                this.selectedSquare = null;
-                this.drawBoard();
+                this.selected = -1;
+                this.renderer.clearSelected();
+                this.renderer.clearHighlighted();
+                this.renderer.drawBoard();
 
-                await this.updateGame();
-            }
-        }
-        this.hideSprite = -1;
-        this.draggingPiece = false;
-        this.drawPieces();
-    }
+                this.renderer.drawPieces(this.controller.getState());
 
-    private onMouseLeave(_e: MouseEvent) {
-        if (!this.started) return;
-        if (
-            (this.whiteTurn && this.whitePlayer !== "Local") ||
-            (!this.whiteTurn && this.blackPlayer !== "Local")
-        )
-            return;
-
-        this.draggingPiece = false;
-        this.selectedSquare = null;
-        this.hideSprite = -1;
-        this.drawPieces();
-        this.drawBoard();
-    }
-
-    private onMouseMove(e: MouseEvent) {
-        if (!this.started) return;
-        if (
-            (this.whiteTurn && this.whitePlayer !== "Local") ||
-            (!this.whiteTurn && this.blackPlayer !== "Local")
-        )
-            return;
-
-        if (this.draggingPiece) {
-            if (this.selectedSquare === null) {
-                throw new Error("Expected selected square to be non-null during mouse move");
-            }
-
-            this.drawPieces();
-            this.drawSpriteAt(
-                this.squares[this.selectedSquare.asIndex()]!,
-                e.offsetX as OctalDigit,
-                e.offsetY as OctalDigit,
-            );
-        }
-    }
-
-    private drawBoard(highlight: number[] = []) {
-        this.boardCanvas.width = this.boardCanvas.clientWidth;
-        this.boardCanvas.height = this.boardCanvas.clientHeight;
-
-        const squareSize: number = this.boardCanvas.width / BOARD_SIZE;
-
-        for (let r: OctalDigit = 0; r < BOARD_SIZE; r++) {
-            for (let c: OctalDigit = 0; c < BOARD_SIZE; c++) {
-                const isLightSquare: boolean = (r + c) % 2 === 0;
-
-                const x: number = c * squareSize;
-                const y: number = r * squareSize;
-
-                var lightSquareCol: string = LIGHT_SQUARE_HEX;
-                var darkSquareCol: string = DARK_SQUARE_HEX;
-                if (highlight.includes(r * BOARD_SIZE + c)) {
-                    lightSquareCol = LIGHT_SQUARE_HIGHLIGHT_HEX;
-                    darkSquareCol = DARK_SQUARE_HIGHLIGHT_HEX;
-                } else if (
-                    this.selectedSquare !== null &&
-                    this.selectedSquare.equals(new Square(c as OctalDigit, r as OctalDigit))
-                ) {
-                    lightSquareCol = LIGHT_SQUARE_SELECTED_HEX;
-                    darkSquareCol = DARK_SQUARE_SELECTED_HEX;
+                const reason: GameOverReason = this.controller.isGameOver();
+                if (reason !== GameOverReason.NONE) {
+                    await this.gameOver(reason);
+                    return
                 }
 
-                // Background color
-                const width: number =
-                    c === BOARD_SIZE - 1 ? this.boardCanvas.width - x : squareSize;
-                const height: number =
-                    r === BOARD_SIZE - 1 ? this.boardCanvas.height - y : squareSize;
-
-                this.boardCtx.fillStyle = isLightSquare ? lightSquareCol : darkSquareCol;
-                this.boardCtx.fillRect(x, y, width, height);
-
-                // Letter
-                const label: string = !this.boardFlipped
-                    ? String.fromCharCode("A".charCodeAt(0) + c) + (BOARD_SIZE - r)
-                    : String.fromCharCode("H".charCodeAt(0) - c) + (r + 1);
-
-                const fontSize: number = Math.floor(squareSize * 0.15);
-
-                this.boardCtx.font = `bold ${fontSize}px arial`;
-                this.boardCtx.fillStyle = isLightSquare ? darkSquareCol : lightSquareCol; // Invert
-                this.boardCtx.fillText(label, x + 3, y + fontSize);
+                this.countdownTurn();
+                if (this.isEngineTurn()) await this.engineMove();
             }
         }
+        this.renderer.drawPieces(this.controller.getState());
     }
 
-    private drawPieces() {
-        // Don't draw if not done loading yet
-        if (!this.spritesLoaded) {
-            console.warn("Requested sprite draw but not finished loading");
-            return;
-        }
+    private isEngineTurn(): boolean {
+        const turn: Color = this.controller.getState().turn;
+        if (turn === Color.WHITE && this.gameInfo!.whitePlayer.isHuman) return false;
 
-        this.spriteCanvas.width = this.spriteCanvas.clientWidth;
-        this.spriteCanvas.height = this.spriteCanvas.clientHeight;
+        if (turn === Color.BLACK && this.gameInfo!.blackPlayer.isHuman) return false;
 
-        this.spriteCtx.clearRect(0, 0, this.spriteCanvas.width, this.spriteCanvas.height);
+        return true;
+    }
 
-        const squareSize: number = this.spriteCanvas.width / BOARD_SIZE;
+    private isPromotes(target: number): boolean {
+        return (
+            this.selected !== -1 &&
+            (target < 8 || target > 55) &&
+            this.controller.getState().pieces[this.selected]!.piece === Piece.PAWN
+        );
+    }
 
-        for (let i: number = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
-            const piece: Piece = this.squares[i]!;
-            const isRook: boolean = piece === "r" || piece === "R";
-            if (piece !== " " && i !== this.hideSprite) {
-                const sprite: HTMLImageElement = this.sprites.get(piece.toLowerCase() as Piece)!;
+    private async onMouseMove(e: MouseEvent) {
+        if (!this.initialised) return;
 
-                const r: OctalDigit = Math.floor(i / BOARD_SIZE) as OctalDigit;
-                const c: OctalDigit = (i % BOARD_SIZE) as OctalDigit;
+        if (this.isDragging) {
+            this.renderer.drawPieces(this.controller.getState());
 
-                // The rook sprites are a little larger than I would've liked.
-                const pieceScale: number = isRook ? ROOK_SCALE : PIECE_SCALE;
-                const pieceSize: number = squareSize * pieceScale;
-
-                const x: number = squareSize * c + (squareSize - pieceSize) / 2;
-                var y: number = squareSize * r + (squareSize - pieceSize) / 2;
-
-                // Shift baseline of rooks down slightly to account for scale.
-                if (isRook) {
-                    y += squareSize * 0.02;
-                }
-
-                // We only load black sprites and then invert colors for white to avoid loading extra
-                if (isWhite(piece)) {
-                    this.spriteCtx.filter = "invert(1)";
-                }
-
-                this.spriteCtx.drawImage(sprite, x, y, pieceSize, pieceSize);
-                this.spriteCtx.filter = "none";
-            }
+            const square: Square = this.controller.getState().pieces[this.selected]!;
+            this.renderer.drawPiece(square.piece, square.color, e.offsetX, e.offsetY);
         }
     }
-}
 
-class CountdownTimer {
-    private countMs: number;
-    private incrementMs: number;
-    private display: HTMLElement;
+    private async getPromotion() {
+        this.clickCover.style.display = "inline";
+        this.promotionMenu.style.display = "inline";
 
-    private isRunning: boolean = false;
-    private startTime: number = 0;
-    private expectedTime: number = 0;
-    private intervalMs: number = 200;
-    private timeout: number = 0;
+        const controller: AbortController = new AbortController();
+        const { signal } = controller;
 
-    constructor(fromMs: number, incrementMs: number, updateHz: number, display: HTMLElement) {
-        this.countMs = fromMs;
-        this.incrementMs = incrementMs;
-        this.intervalMs = 1000 / updateHz;
-        this.display = display;
-        this.display.innerText = this.formatTime();
-    }
+        return new Promise<Piece>((res, _rej) => {
+            const handleChoice = (piece: Piece) => {
+                this.promotionMenu.style.display = "none";
+                this.clickCover.style.display = "none";
+                controller.abort();
+                res(piece);
+            };
 
-    public start() {
-        if (this.isRunning) {
-            throw new Error("Countdown timer is already running");
-        }
-
-        this.isRunning = true;
-        this.startTime = Date.now();
-        this.expectedTime = this.startTime + this.intervalMs;
-
-        this.timeout = setTimeout(() => this.step(), this.intervalMs);
-    }
-
-    public stop() {
-        if (!this.isRunning) throw new Error("Countdown timer is not running");
-
-        if (this.incrementMs > 0) {
-            this.countMs += this.incrementMs;
-            this.display.innerText = this.formatTime();
-        }
-
-        this.isRunning = false;
-        clearTimeout(this.timeout);
-    }
-
-    public getMs(): number {
-        return this.countMs;
-    }
-
-    private step() {
-        const drift: number = Date.now() - this.expectedTime;
-        if (drift > this.intervalMs) {
-            console.warn("Large timer drift detected");
-        }
-
-        this.countMs -= this.intervalMs;
-        this.display.innerText = this.formatTime();
-        this.expectedTime += this.intervalMs;
-        this.timeout = setTimeout(() => this.step(), this.intervalMs - drift);
-    }
-
-    private formatTime(): string {
-        const countSeconds = this.countMs / 1000;
-
-        var lhs: string;
-        var rhs: string;
-
-        if (countSeconds <= 60) {
-            const seconds: number = Math.floor(countSeconds);
-            const millis: number = parseFloat((countSeconds - seconds).toFixed(2)) * 100;
-
-            lhs = seconds.toString();
-            rhs = millis.toFixed(0);
-            if (rhs.length === 1) rhs += "0";
-            else if (rhs.length > 2) rhs = rhs.substring(0, 2);
-        } else {
-            const minutes: number = Math.floor(countSeconds / 60);
-            const seconds: number = Math.floor(countSeconds - minutes * 60);
-
-            lhs = minutes.toString();
-            rhs = seconds.toString();
-            if (rhs.length === 1) rhs = "0" + rhs;
-            else if (rhs.length > 2) rhs = rhs.substring(0, 2);
-        }
-
-        return `${lhs}:${rhs}`;
+            this.knightButton.addEventListener("click", () => handleChoice(Piece.KNIGHT), {
+                signal,
+            });
+            this.bishopButton.addEventListener("click", () => handleChoice(Piece.BISHOP), {
+                signal,
+            });
+            this.rookButton.addEventListener("click", () => handleChoice(Piece.ROOK), { signal });
+            this.queenButton.addEventListener("click", () => handleChoice(Piece.QUEEN), { signal });
+        });
     }
 }

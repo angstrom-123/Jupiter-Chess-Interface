@@ -26,6 +26,7 @@ set(SOURCES
     engine/src/zobrist.cpp
     engine/src/rng.cpp
     engine/src/transpositionTable.cpp
+    engine/src/history.cpp
     engine/src/pythonModule.cpp
 )
 

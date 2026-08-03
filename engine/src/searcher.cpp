@@ -15,7 +15,7 @@
 
 namespace chrono = std::chrono;
 
-Move Searcher::FindBest(const BoardState& state, uint64_t msRemaining)
+Move Searcher::FindBest(const BoardState& state, History& history, uint64_t msRemaining)
 {
     auto startPoint = chrono::high_resolution_clock::now();
     uint64_t startMs = chrono::time_point_cast<chrono::milliseconds>(startPoint).time_since_epoch().count();
@@ -74,15 +74,25 @@ Move Searcher::FindBest(const BoardState& state, uint64_t msRemaining)
             }
             m_NodesEvaluated++;
 
-            int64_t score = -Search((SearchInfo) {
-                .state = workingState, 
-                .alpha = -beta, 
-                .beta = -alpha, 
-                .depth = static_cast<uint8_t>(depth - 1), 
-                .ply = 1,
-                .targetMs = targetMs
-            });
+            int64_t score;
+
+            // Repetition draw check
+            history.Push(workingState);
+            if (history.IsRepetition()) {
+                score = 0; // TODO: Contempt?
+            } else {
+                score = -Search((SearchInfo) {
+                    .state = workingState, 
+                    .history = history,
+                    .alpha = -beta, 
+                    .beta = -alpha, 
+                    .depth = static_cast<uint8_t>(depth - 1), 
+                    .ply = 1,
+                    .targetMs = targetMs
+                });
+            }
             UnmakeMove(moveData, workingState);
+            history.Pop();
 
             // Ran out of time
             if (m_SearchAborted)
@@ -196,6 +206,7 @@ int64_t Searcher::Search(SearchInfo&& info)
     if (info.depth == 0) 
         return Quiesce((QuiesceInfo) {
             .state = info.state, 
+            .history = info.history,
             .alpha = info.alpha, 
             .beta = info.beta, 
             .ply = info.ply,
@@ -225,8 +236,16 @@ int64_t Searcher::Search(SearchInfo&& info)
         }
         m_NodesEvaluated++;
 
-        int64_t score = -Search(SearchInfo::Next(info));
+        int64_t score;
+
+        // Repetition draw check
+        info.history.Push(info.state);
+        if (info.history.IsRepetition())
+            score = 0; // TODO: Contempt?
+        else
+            score = -Search(SearchInfo::Next(info));
         UnmakeMove(moveData, info.state);
+        info.history.Pop();
 
         if (m_SearchAborted) 
             return 0;
@@ -353,8 +372,16 @@ int64_t Searcher::Quiesce(QuiesceInfo&& info)
         }
         m_NodesEvaluated++;
 
-        int64_t score = -Quiesce(QuiesceInfo::Next(info));
+        int64_t score;
+
+        // Repetition draw check
+        info.history.Push(info.state);
+        if (info.history.IsRepetition())
+            score = 0; // TODO: Contempt?
+        else
+            score = -Quiesce(QuiesceInfo::Next(info));
         UnmakeMove(moveData, info.state);
+        info.history.Pop();
 
         if (score >= info.beta)
             return score;

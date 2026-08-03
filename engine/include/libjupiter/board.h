@@ -7,6 +7,7 @@
 #include "core.h"
 #include "move.h"
 #include "searcher.h"
+#include "history.h"
 
 namespace libjupiter {
     class Board {
@@ -25,6 +26,8 @@ namespace libjupiter {
 
     private:
         EngineState::Value m_InternalState{EngineState::OK};
+        Zobrist m_Zobrist;
+        History m_History;
         Searcher m_Searcher;
         BoardState m_State;
         uint64_t m_FullMoves{1};

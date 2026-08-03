@@ -45,7 +45,7 @@ constexpr std::size_t TRANSPOSITION_TABLE_SIZE = 1ul << TRANSPOSITION_TABLE_KEY_
 
 class TranspositionTable {
 public:
-    TranspositionTable();
+    TranspositionTable(Zobrist& zobrist);
     ~TranspositionTable();
 
     std::size_t OccupiedMiB() const;
@@ -57,7 +57,7 @@ private:
     uint64_t Index(ZobristKey key) const;
 
 private:
-    Zobrist m_Zobrist{Zobrist()};
+    Zobrist& m_Zobrist;
     std::size_t m_Occupancy{0};
     TableEntry *m_Table{nullptr};
 };

@@ -23,6 +23,10 @@ div {
     color: var(--white);
 }
 
+hr {
+    width: 100%;
+}
+
 button {
     font-family: "Arial";
     color: var(--white);
@@ -117,7 +121,7 @@ div p {
     position: relative;
     width: 100%;
     height: 100%;
-    min-width: 400px;
+    min-width: 450px;
 }
 
 .cards-container {
@@ -128,70 +132,6 @@ div p {
     row-gap: 30px;
     border-radius: 5px;
     box-sizing: border-box;
-}
-
-.middle-card {
-    height: 64px;
-    display: grid;
-    align-items: center;
-    justify-content: space-between;
-    background-color: var(--dark-gray);
-    border-radius: 5px;
-    grid-template-columns: auto auto auto;
-    padding: 30px;
-}
-
-.middle-card button {
-    position: relative;
-    height: 64px;
-    aspect-ratio: 1;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 5px;
-    font-size: 22pt;
-    font-weight: bold;
-}
-
-.middle-card button img {
-    position: absolute;
-    aspect-ratio: 1;
-    filter: invert(1);
-}
-
-.card {
-    display: grid;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    background-color: var(--dark-gray);
-    grid-template-rows: auto auto;
-    padding: 25px;
-    border-radius: 5px;
-}
-
-.card-name {
-    display: flex;
-    box-sizing: border-box;
-    border-radius: 3px;
-    font-size: 36pt;
-    color: var(--white);
-    align-items: center;
-    justify-content: center;
-}
-
-.card-timer {
-    display: flex;
-    margin: 0px auto;
-    width: fit-content;
-    padding: 0px 15px 0px 15px;
-    box-sizing: border-box;
-    border-radius: 3px;
-    font-size: 72pt;
-    color: var(--white);
-    align-items: center;
-    justify-content: center;
 }
 
 .board-container {
@@ -223,27 +163,6 @@ div p {
     z-index: 2;
 }
 
-.loading-menu {
-    position: absolute;
-    display: flex;
-    padding: 25px;
-    top: 0px;
-    left: 0px;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    background-color: var(--dark-gray);
-    border-radius: 5px;
-    z-index: 2;
-    align-items: center;
-    justify-content: center;
-}
-
-.loading-menu p {
-    font-size: 22pt;
-    font-weight: bold;
-}
-
 .popup-menu {
     position: absolute;
     padding: 25px;
@@ -267,28 +186,54 @@ div p {
     font-weight: bold;
 }
 
-.popup-menu form {
+.body-container {
     display: grid;
     row-gap: 25px;
 }
 
-.popup-menu form label {
+.body-container label {
     font-size: 14pt;
 }
 
-.play-as-container {
-    display: grid;
-    row-gap: 15px;
+.controls-container {
+    display: none;
+    row-gap: 25px;
 }
 
-.play-against-container {
-    display: grid;
-    row-gap: 15px;
+.button-container {
+    display: flex;
+    justify-content: space-between;
 }
 
-.time-control-container {
-    display: grid;
-    row-gap: 15px;
+.button-container div {
+    position: relative;
+    display: flex;
+    height: 100%;
+    flex-direction: row;
+}
+
+.button-container div div{
+    display: inline;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    z-index: 10;
+}
+
+.button-container button {
+    height: 64px;
+    aspect-ratio: 1;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    font-size: 22pt;
+    font-weight: bold;
+}
+
+button img {
+    filter: invert(1);
 }
 
 input[type=submit] {
@@ -307,19 +252,29 @@ input[type=submit]:hover {
     box-shadow: 0 0 14px var(--accent);
 }
 
-input[type=radio] {
-    appearance: none;
-    width: 35px;
-    height: 35px;
+.loading-menu {
+    position: absolute;
+    display: flex;
+    padding: 25px;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: var(--dark-gray);
     border-radius: 5px;
-    outline-offset: 2px;
+    z-index: 2;
+    align-items: center;
+    justify-content: center;
 }
 
-input[type=radio]:checked {
-    outline: 2px solid var(--accent);
+.loading-menu p {
+    font-size: 22pt;
+    font-weight: bold;
 }
 
-select {
+input[type=file] {
+    display: flex;
     background-color: var(--light-gray);
     border: none;
     height: 35px;
@@ -327,36 +282,74 @@ select {
     border-radius: 5px;
     color: var(--white);
     font-size: 12pt;
-    padding-left: 10px;
-}
-
-.time-controls {
-    display: grid;
+    padding: 5px;
     box-sizing: border-box;
-    grid-template-columns: repeat(auto-fit, 22.86%);
-    gap: 10px;
+    text-align: center;
 }
 
-.time-controls input[type=radio] {
-    width: 100%;
-    background-color: var(--light-gray);
-    margin: 0px;
-    padding: 0px;
+input[type=file]:hover {
+    background-color: var(--mid-gray);
 }
 
-.time-controls div {
-    position: relative;
+::file-selector-button {
+    display: none;
 }
 
-.time-controls div label {
-    position: absolute;
+.player-card {
     display: flex;
+    height: 100px;
+    background-color: var(--mid-gray);
+    align-items: center;
+    border-radius: 5px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.description-container {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    flex-direction: column;
+    gap: 0px;
+    padding: 10px 10px 15px 10px;
+    box-sizing: border-box;
+    justify-content: space-between;
+}
+
+.description-container p {
+    padding: 0px;
+    margin: 0px;
+}
+
+.description-container p:first-child {
+    font-size: 16pt;
+    font-weight: bold;
+}
+
+.image-container {
+    display: flex;
+    height: 100%;
+    aspect-ratio: 1;
+    background-color: var(--light-gray);
     justify-content: center;
     align-items: center;
+    border-radius: 3px;
+}
+
+.image-container img {
+    height: 80%;
+}
+
+.promotion-container {
+    display: none;
+    position: absolute;
     top: 0px;
     left: 0px;
+    height: 100%;
     width: 100%;
-    height: 35px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    z-index: 3;
 }
 
 .fen-menu {
@@ -432,147 +425,3 @@ select {
     filter: invert(1);
 }
 
-.game-over-menu {
-    position: relative;
-    width: 60%;
-    height: 90%;
-    top: 50%;
-    left: 50%;
-    box-sizing: border-box;
-    transform: translate(-50%, -50%);
-    border-radius: 5px;
-    background-color: var(--mid-gray);
-    padding: 30px;
-    z-index: 3;
-}
-
-.game-over-menu p {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 24pt;
-    font-weight: bold;
-}
-
-.game-over-menu span {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 18pt;
-    font-weight: bold;
-    padding: 20px;
-}
-
-.canvas-container {
-    position: relative;
-    padding: 0px;
-    margin: 0px;
-    width: 100%;
-    aspect-ratio: 1;
-}
-
-.canvas-container canvas {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    height: 100%;
-    width: 100%;
-    border-radius: 5px;
-    z-index: 1;
-}
-
-.mini-board-canvas {
-    z-index: 3;
-}
-
-.mini-sprite-canvas {
-    z-index: 4;
-}
-
-.button-container {
-    height: 84px;
-    width: 100%;
-    box-sizing: border-box;
-    margin-top: 30px;
-    display: grid;
-    align-items: center;
-    padding: 10px;
-    justify-content: space-between;
-    background-color: var(--dark-gray);
-    border-radius: 5px;
-    grid-template-columns: auto auto;
-}
-
-.game-over-menu div button {
-    height: 64px;
-    aspect-ratio: 1;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 5px;
-    font-size: 22pt;
-    font-weight: bold;
-}
-
-.game-over-menu div button img {
-    filter: invert(1);
-}
-
-.promotion-container {
-    display: none;
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    height: 100%;
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
-    z-index: 3;
-}
-
-.promotion-menu {
-    position: absolute;
-    width: 70%;
-    height: fit-content;
-    top: 50%;
-    left: 50%;
-    box-sizing: border-box;
-    transform: translate(-50%, -50%);
-    border-radius: 5px;
-    background-color: var(--mid-gray);
-    z-index: 3;
-}
-
-.promotion-menu p {
-    display: flex;
-    font-size: 22pt;
-    font-weight: bold;
-    align-items: center;
-    justify-content: center;
-    padding: 30px;
-}
-
-.promotion-buttons {
-    display: grid;
-    grid-template-columns: auto auto auto auto;
-    column-gap: 10px;
-    padding: 10px;
-}
-
-.promotion-buttons button {
-    width: 100%;
-    aspect-ratio: 1;
-    border: none;
-    background-color: var(--mid-gray);
-}
-
-.promotion-buttons button:hover {
-    background-color: var(--light-gray);
-}
-
-.promote-icon {
-    height: 73%;
-    width: auto;
-    filter: invert(1);
-}

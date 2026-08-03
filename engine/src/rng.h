@@ -31,7 +31,7 @@
 // More robust than anyone could need, but uses more registers than RomuTrio.
 // Est. capacity >= 2^90 bytes. Register pressure = 8 (high). State size = 256 bits.
 
-// Forgiving with seed, should be fine to seed with any numbers, especially if warmed before use.
+// FORGIVING WITH SEED, SHOULD BE FINE TO SEED WITH ANY NUMBERS, ESPECIALLY IF WARMED BEFORE USE.
 class RomuQuadRandom {
 public:
     RomuQuadRandom(uint64_t seed[4]);

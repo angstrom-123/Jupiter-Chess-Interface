@@ -20,9 +20,9 @@ uint64_t RomuQuadRandom::Generate()
 {
    uint64_t wp = m_StateW, xp = m_StateX, yp = m_StateY, zp = m_StateZ;
    m_StateW = 15241094284759029579u * zp; // a-mult
-   m_StateX = zp + ROTL(wp,52);           // b-rotl, c-add
+   m_StateX = zp + ROTL(wp, 52);          // b-rotl, c-add
    m_StateY = yp - xp;                    // d-sub
    m_StateZ = yp + wp;                    // e-add
-   m_StateZ = ROTL(m_StateZ,19);          // f-rotl
+   m_StateZ = ROTL(m_StateZ, 19);         // f-rotl
    return xp;
 }

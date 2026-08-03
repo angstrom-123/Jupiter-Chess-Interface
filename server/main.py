@@ -3,6 +3,7 @@ import json
 from typing import ClassVar, Literal
 
 from fastapi import FastAPI, Request, Response, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
 from server.engine import BaseEngine, TimeControl
@@ -13,7 +14,7 @@ from server.players import engines
 Color = Literal["white", "black"]
 
 class State(BaseModel):
-    model_config: ClassVar[ConfigDict] =ConfigDict(arbitrary_types_allowed=True)
+    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
     
     turn: Color = "white"
     white_engine: BaseEngine | None = None
@@ -32,6 +33,7 @@ class TimeControlInfo(BaseModel):
     increment: int
 
 class GameStartInfo(BaseModel):
+    fen: str
     white_player: str
     black_player: str 
     time_control: TimeControlInfo
@@ -61,7 +63,7 @@ async def game_start(request: Request):
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
         state.white_engine = [e for e in engines if e.name == info.white_player][0]()
-        state.white_engine.init(tc)
+        state.white_engine.init(tc, info.fen)
 
     if info.black_player != "Local":
         # Invalid black player
@@ -69,7 +71,7 @@ async def game_start(request: Request):
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
         state.black_engine = [e for e in engines if e.name == info.black_player][0]()
-        state.black_engine.init(tc)
+        state.black_engine.init(tc, info.fen)
 
     state.turn = "white";
 
@@ -122,6 +124,14 @@ async def make_move(request: Request):
 
     return NO_RESPONSE
 
-# ==================== App Start ==================== 
+# ==================== Routing ==================== 
 
-app.frontend("/", directory="client", fallback="index.html")
+@app.get("/")
+async def index():
+    return FileResponse("client/index.html");
+
+@app.get("/replay")
+async def replay():
+    return FileResponse("client/replay.html");
+
+app.frontend("/", directory="client")

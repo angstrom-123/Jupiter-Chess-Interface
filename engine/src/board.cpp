@@ -1,6 +1,3 @@
-#include "libjupiter/board.h"
-#include "core.h"
-#include "move.h"
 #include <charconv>
 #include <cstring>
 #include <immintrin.h>
@@ -8,12 +5,17 @@
 #include <sstream>
 #include <string>
 
+#include "libjupiter/board.h"
+#include "core.h"
+#include "move.h"
+#include "zobrist.h"
+
 namespace libjupiter {
     Board::Board(const char *fen)
+        : m_Zobrist{Zobrist()}, m_History{m_Zobrist}, m_Searcher{m_Zobrist}
     {
         if (fen == nullptr)
         {
-            m_InternalState = EngineState::OK;
             m_State.pieces.StartPos();
             m_State.rights = CastlingRight::KINGSIDE_BLACK | 
                 CastlingRight::KINGSIDE_WHITE |
@@ -22,7 +24,6 @@ namespace libjupiter {
             m_State.turn = Color::WHITE;
             m_State.enPassantIndex = UINT8_MAX;
             m_State.halfMoves = 0;
-            m_FullMoves = 1;
             return;
         }
 
@@ -170,6 +171,9 @@ namespace libjupiter {
                 return;
             }
         }
+
+        // Save initial board state to history
+        m_History.Push(m_State);
     }
 
     void Board::SetTimeControl(uint64_t seconds, uint64_t increment)
@@ -181,7 +185,7 @@ namespace libjupiter {
     {
         // TODO: Draw by repetition, 50-move rule
 
-        Move bestMove = m_Searcher.FindBest(m_State, moveMs);
+        Move bestMove = m_Searcher.FindBest(m_State, m_History, moveMs);
         if (!Move::IsValid(bestMove))
             m_InternalState = EngineState::ERROR_COULDNT_FIND_MOVE;
 
@@ -197,6 +201,7 @@ namespace libjupiter {
         }
 
         m_Searcher.MakeMove(move, m_State);
+        m_History.Push(m_State);
 
         if (m_State.turn == Color::WHITE)
             m_FullMoves++;

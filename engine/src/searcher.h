@@ -4,13 +4,13 @@
 #include "buffer.h"
 #include "core.h"
 #include "evaluator.h"
+#include "history.h"
 #include "move.h"
 #include "attackTable.h"
 #include "movegen.h"
 #include "transpositionTable.h"
 
-const uint64_t MAX_PLY = 32;
-using LineBuffer = Buffer<Move, MAX_PLY>;
+using LineBuffer = Buffer<Move, 32>;
 
 struct MoveData {
     Move move{Move::Invalid()};
@@ -23,6 +23,7 @@ struct MoveData {
 
 struct SearchInfo {
     BoardState& state;
+    History& history;
     int64_t alpha; 
     int64_t beta; 
     uint8_t depth; 
@@ -33,6 +34,7 @@ struct SearchInfo {
     {
         return (SearchInfo) { 
             .state = current.state,
+            .history = current.history,
             .alpha = -current.beta,
             .beta = -current.alpha,
             .depth = static_cast<uint8_t>(current.depth - 1),
@@ -44,6 +46,7 @@ struct SearchInfo {
 
 struct QuiesceInfo {
     BoardState& state;
+    History& history;
     int64_t alpha;
     int64_t beta;
     uint8_t ply;
@@ -53,6 +56,7 @@ struct QuiesceInfo {
     {
         return (QuiesceInfo) {
             .state = current.state,
+            .history = current.history,
             .alpha = -current.beta,
             .beta = -current.alpha,
             .ply = static_cast<uint8_t>(current.ply + 1),
@@ -63,12 +67,9 @@ struct QuiesceInfo {
 
 class Searcher {
 public:
-    Searcher() = default;
-    Searcher(const Searcher &) = default;
-    Searcher(Searcher &&) = default;
-    Searcher &operator=(const Searcher &) = default;
-    Searcher &operator=(Searcher &&) = default;
-    Move FindBest(const BoardState &state, uint64_t ms);
+    Searcher(Zobrist& zobrist)
+        : m_TranspositionTable(zobrist) {}
+    Move FindBest(const BoardState& state, History& history, uint64_t msRemaining);
     MoveData MakeMove(Move move, BoardState &state);
     void SetTimeControl(uint64_t seconds, uint64_t increment);
 
@@ -92,6 +93,6 @@ private:
     uint64_t m_TranspositionHits{0};
     bool m_SearchAborted{false};
     AttackTable m_AttackTable{AttackTable()};
-    TranspositionTable m_TranspositionTable{TranspositionTable()};
     Evaluator m_Eval{Evaluator()};
+    TranspositionTable m_TranspositionTable;
 };

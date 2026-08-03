@@ -8,13 +8,16 @@
 <body>
     <div class="container">
         <div class="side-bar">
-            <button>Jupiter Client</button>
-            <button onclick="window.open('https://github.com/angstrom-123/Chess-Engine', '_blank')">GitHub</button>
+            <a href="/">Jupiter Client</a>
+            <a href="/">Play</a>
+            <a href="/replay">Load</a>
+            <a href="https://github.com/angstrom-123/Chess-Engine">GitHub</a>
         </div>
         <div class="content">
+            <div id="click-cover" class="click-cover"></div>
             <div class="cards-parent">
                 <div class="cards-container">
-                    <div class="card">
+                    <div id="opponent-card" class="card">
                         <div class="card-name">
                             <p id="opponent-label">Player 1</p>
                         </div>
@@ -22,7 +25,12 @@
                             <p><span id="opponent-timer">60:00</span></p>
                         </div>
                     </div>
-                    <div class="card">
+                    <div class="middle-card">
+                        <button title="Flip Board" id="flip-board"><img src="assets/icons/repeat.png" alt="Flip board" style="transform: rotate(90deg); width: 75%;"></button>
+                        <button title="Resign" id="resign"><span id="confirm-resign"></span><img id="resign-icon" src="assets/icons/white-flag.png" alt="Resign" style="width: 80%;"></button>
+                        <button title="Copy FEN" id="fen"><img src="assets/icons/copy.png" alt="Copy FEN" style="width: 75%;"></button>
+                    </div>
+                    <div id="friendly-card" class="card">
                         <div class="card-name">
                             <p id="friendly-label">Player 2</p>
                         </div>
@@ -112,6 +120,30 @@
                         </div>
                     </div>
                 </div>
+                <div id="fen-menu" class="promotion-container">
+                    <div class="fen-menu">
+                        <button class="close-button" id="close-fen"><img src="assets/icons/close.png" alt="Close" style="width: 100%;"></button>
+                        <p>Current Position FEN</p>
+                        <div>
+                            <span id="fen-span"></span>
+                            <button title="Copy to Clipboard" id="copy-fen"><img src="assets/icons/copy.png" alt="Copy" style="width: 80%;"></button>
+                        </div>
+                    </div>
+                </div>
+                <div id="game-over-menu" class="promotion-container">
+                    <div class="game-over-menu">
+                        <p>Game Over</p>
+                        <span id="game-over-span">[Color] won by [Condition]</span>
+                        <div class="canvas-container">
+                            <canvas id="mini-board-canvas" class="mini-board-canvas"></canvas>
+                            <canvas id="mini-sprite-canvas" class="mini-sprite-canvas"></canvas>
+                        </div>
+                        <div class="button-container">
+                            <button title="Download Game" id="download-game"><img src="assets/icons/download.png" alt="Download" style="width: 80%;"></button>
+                            <button title="Ok" id="game-over-ok"><img src="assets/icons/check.png" alt="Ok" style="width: 90%;"></button>
+                        </div>
+                    </div>
+                </div>
                 <canvas id="board-canvas" class="board-canvas"></canvas>
                 <canvas id="sprite-canvas" class="sprite-canvas"></canvas>
             </div>
@@ -120,7 +152,5 @@
 
     </div>
 </body>
-<script type="module" src="assets/dist/moves.mjs" defer></script>
-<script type="module" src="assets/dist/board.mjs" defer></script>
 <script type="module" src="assets/dist/index.mjs" defer></script>
 </html>
