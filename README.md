@@ -37,6 +37,13 @@ cd server
 .venv\bin\activate.bat
 ```
 
+### Install python dependencies
+
+```shell
+uv pip install -e . --force-reinstall
+uv sync
+```
+
 ### Start the server
 
 ```shell
