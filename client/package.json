@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "build": "tsc",
+    "format": "prettier --write ./src"
+  },
+
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

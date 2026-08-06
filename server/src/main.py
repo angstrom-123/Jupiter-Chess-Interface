@@ -1,15 +1,18 @@
 import mimetypes
 import json
 from typing import ClassVar, Literal
+from pathlib import Path
 
+from pydantic import BaseModel, ConfigDict
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, ConfigDict
 
-from server.engine import BaseEngine, TimeControl
-from server.players import engines
+from framework.base_engine import BaseEngine, TimeControl
+from src.discovery import Discovery
 
 # ==================== App Definitions ==================== 
+
+CLIENT_DIR = Path(".").resolve().parent / "client"
 
 Color = Literal["white", "black"]
 
@@ -22,6 +25,8 @@ class State(BaseModel):
 
 # ==================== App Data ==================== 
 
+discovery: Discovery = Discovery()
+engines: dict[str, type[BaseEngine]] = discovery.discover()
 state: State = State() 
 
 # ==================== Request / Reponse Body Structures ==================== 
@@ -59,18 +64,18 @@ async def game_start(request: Request):
 
     if info.white_player != "Local":
         # Invalid white player
-        if info.white_player not in [e.name for e in engines]:
+        if info.white_player not in engines:
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
-        state.white_engine = [e for e in engines if e.name == info.white_player][0]()
+        state.white_engine = engines[info.white_player]()
         state.white_engine.init(tc, info.fen)
 
     if info.black_player != "Local":
         # Invalid black player
-        if info.black_player not in [e.name for e in engines]:
+        if info.black_player not in engines:
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
-        state.black_engine = [e for e in engines if e.name == info.black_player][0]()
+        state.black_engine = engines[info.black_player]()
         state.black_engine.init(tc, info.fen)
 
     state.turn = "white";
@@ -82,7 +87,7 @@ async def engine_list(_request: Request):
     return Response(
         status_code=status.HTTP_200_OK,
         media_type="application/json",
-        content=json.dumps({ "engines": [e.name for e in engines] })
+        content=json.dumps({ "engines": list(engines.keys()) })
     )
 
 @app.post("/best-move/")
@@ -128,10 +133,10 @@ async def make_move(request: Request):
 
 @app.get("/")
 async def index():
-    return FileResponse("client/index.html");
+    return FileResponse(CLIENT_DIR / "index.html");
 
 @app.get("/replay")
 async def replay():
-    return FileResponse("client/replay.html");
+    return FileResponse(CLIENT_DIR / "replay.html");
 
-app.frontend("/", directory="client")
+app.frontend("/", directory=CLIENT_DIR)

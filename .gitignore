@@ -1,7 +1,5 @@
-build/
 .cache/
 .venv/
-compile_commands.json
 client/assets/dist/*
 node_modules/
 __pycache__/

@@ -1,0 +1,29 @@
+[project]
+name = "jupiter-server"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.138.2",
+    "pydantic>=2.13.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+framework = {path = "framework", editable = true}
+
+[tool.uv.workspace]
+members = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["framework"]
+
+[tool.fastapi]
+entrypoint = "src.main:app"
+
+[tool.basedpyright]
+extraPaths = ["./src", "./framework"]
+venvPath = "."
+venv = ".venv"

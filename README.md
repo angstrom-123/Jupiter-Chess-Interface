@@ -1,140 +1,128 @@
-# Chess Engine
-
-Work-In-Progress - Partially implemented, API subject to change.
-A chess engine written in C++ with a Python 3 API.
+# Jupiter Chess Interface
 
 ## Prerequisites
-- Modern C++ compiler (>=c++23)
-- Python 3.1x
+- Python >=3.12
 - Astral uv
 - npm
-- CMake
-- make / windows alternative (c++ build system)
 
-## Build and Run Client
+## Build and Run
 
-### Build library
+### Transpile the client
+
 ```shell
-mkdir build && cd build 
-cmake .. -DCMAKE_BUILD_TYPE=Release 
-make
+cd client
+npm run build
 cd ..
 ```
 
-### Set up Server
-```shell
-uv sync
-```
+### Source the virtual environment
 
-On Linux Run:
+#### Linux / Mac
 ```shell
+cd server
 source .venv/bin/activate
 ```
-On Windows Run: 
+
+#### Windows Powershell:
+
 ```shell
-.\venv\Scripts\Activate.ps1
+cd server 
+.venv\bin\activate.ps1
 ```
 
-### Set up client
+#### Windows CMD:
+
 ```shell
-npm install 
+cd server 
+.venv\bin\activate.bat
 ```
 
 ### Start the server
+
 ```shell
-npm run start
+fastapi run
 ```
 
-### Done 
-Your server should be running at http://localhost:8000 (by default)
+### Open in browser
 
-## Custom Engines
+The active port will be listed by the `fastapi run` command (default 8000).
+Access at localhost:port (default http://localhost:8000).
 
-The client and server support arbitrary engines for move generation as long as they implement a simple API.
-To do this, create a subclass of the `BaseEngine` class in `engine.py` and implement all its methods.
-Descriptions of the inputs / outputs of all methods are available in the source code in `engine.py`.
-Once implemented, add it to the list of engines in `players.py` to register it.
-It will now show up as an option in the client interface.
-Refer to `jupiter.py` (detailed below and in source code) for an example.
+> [!NOTE]
+> [Jupiter Engine](https://github.com/angstrom-123/Jupiter-Chess-Engine) is bundled with this repo if you cloned recursively. It will not show up in the web client unless you build it. Follow the steps in Jupiter's documentation to do so if you wish.
 
-## Custom Engine Example (Jupiter)
+## Develop
 
-### Wrapper Class
+### Writing an Engine
 
-Create `jupiter.py`:
+#### Step 1 - Setup Your Project
+
+- Create a new folder inside of `engines` for your engine
+- Go inside your new engine folder
+- Create an empty file named exactly `__init__.py` to register your module
+- Create a new python file. This will be your interface with Jupiter Client. You can call it anything, for example `example_engine.py`
+- Inside this file, import required classes: `from framework.base_engine import BaseEngine, TimeControl`
+- Also import the `override` annotation: `from typing_extensions import override`
+- Create a class for your engine that inherits from `BaseEngine`. Name it what you like, for example `class ExampleEngine(BaseEngine):`
+
+#### Step 2 - Implement The API
+
+Currently there are three required methods that you must implement in your engine class. It is reccommended to keep additional engine implementation separate to keep this interface clean.
+
+The methods that you must implement are:
+- init: `init(self, tc: TimeControl, fen: str | None = None) -> None`
+  - Initialise your engine with a provided time control and initial position in FEN (Forsyth-Edwards Notation)
+- go: `go(self, ms_left: int) -> str`
+  - Come up with a move given the amount of time remaining in milliseconds
+  - The response MUST be in UCI-flavoured LAN.
+    - Examples: e2e4, e7e5, e1g1 (white short castling), e7e8q (for promotion)
+    - Knights are notated as `n`, Kings are notated as `k`
+- move: `move(self, move: str) -> None`
+  - Apply a move to the engine's internal state
+  - This move will arrive in the same UCI LAN as described above
+  - The move will be legal, but may not be the one that your engine generated with `go`
+
+You must also give your engine a name by declaring a static variable `name` like so:
+```python 
+class ExampleEngine(BaseEngine):
+    name: str = "Example Engine"
+    ...
+```
+
+### Example Engine
+
+Here is an example of a dummy engine to illustrate the format of your interface.
+For a fully implemented example, refer to Jupiter engine (`engines/jupiter/jupiter.py`).
+
 ```python
 from typing_extensions import override
+from framework.base_engine import BaseEngine, TimeControl
 
-# This is the API class that needs to be implemented
-from server.engine import BaseEngine
+# Import your engine implementation here
 
-# This is the custom engine implementation - in this case Jupiter's Board
-from jupiter import Board
+class ExampleEngine(BaseEngine):
+    name: str = "Example Engine"
 
-# Override all required methods of BaseEngine
-class Jupiter(BaseEngine):
-    name: str = "Jupiter"
-    board: Board | None = None 
+    # Add any other members you want here 
 
     @override
     def init(self, tc: TimeControl, fen: str | None = None) -> None:
-        if fen is None:
-            self.board = Board()
-        else:
-            self.board = Board(fen)
+        
+        # Initialise your engine here
 
-        self.board.set_time_control(tc.seconds, tc.increment)
+        raise NotImplementedError("Please implement this method")
 
     @override
-    def go(self, msLeft: int) -> str:
-        if self.board is not None:
-            return self.board.go(msLeft)
-        else:
-            raise AttributeError("self.board is not initialised. Try calling init.")
+    def go(self, ms_left: int) -> str:
+
+        # Find the best move and return it in UCI LAN here
+
+        raise NotImplementedError("Please implement this method")
 
     @override
     def move(self, move: str) -> None:
-        if self.board is not None:
-            self.board.make_move(move)
-        else:
-            raise AttributeError("self.board is not initialised. Try calling init.")
-```
 
-### Register Engine
+        # Apply a UCI LAN move to your engine here
 
-Add to `players.py`:
-```python 
-# Import whichever engine wrapper you like
-from server.jupiter import Jupiter
-
-# Any engines need to be registered here
-engines: list[type[BaseEngine]] = [
-    Jupiter,
-]
-```
-
-## Engine Development
-
-### Debug Library Build
-```shell
-mkdir build && cd build 
-cmake .. -DCMAKE_BUILD_TYPE=Debug
-make
-```
-
-### Rebuilding Library
-If you ever rebuild the c++ library, you need to refresh uv dependencies.
-```shell
-uv pip install -e . --force-reinstall
-```
-
-Alternatively, you can compile the library and reinstall dependencies like so (Linux).
-```shell
-npm run reinstall
-```
-
-### Development Server
-Note that typescript files do not currently auto-refresh, so you need to rerun the dev server if you change those. Changes to the server-side should be fine.
-```shell
-npm run dev
+        raise NotImplementedError("Please implement this method")
 ```

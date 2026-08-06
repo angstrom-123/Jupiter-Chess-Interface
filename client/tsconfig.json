@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "rootDir": "./client/src",
-    "outDir": "./client/assets/dist",
+    "rootDir": "./src",
+    "outDir": "./assets/dist",
 
     "target": "ES2022",
     "module": "ESNext",
@@ -21,12 +21,9 @@
     "skipLibCheck": true,
   },
   "include": [
-    "./client/src/**/*"
+    "./src/**/*"
   ],
   "exclude": [
-    "server",
-    "engine",
-    "build",
     "node_modules"
   ]
 }
