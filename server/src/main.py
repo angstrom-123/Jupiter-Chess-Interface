@@ -70,6 +70,18 @@ async def game_start(request: Request):
     info: GameStartInfo = GameStartInfo.model_validate_json(await request.body())
     tc: TimeControl = TimeControl(info.time_control.seconds, info.time_control.increment)
 
+    if state.white_engine_process is not None:
+        state.white_engine_process.terminate()
+
+    if state.black_engine_process is not None:
+        state.black_engine_process.terminate()
+
+    state.white_engine = None
+    state.black_engine = None
+
+    state.white_engine_process = None
+    state.black_engine_process = None
+
     if info.white_player != "Local":
         # Invalid white player
         if info.white_player not in engines:
