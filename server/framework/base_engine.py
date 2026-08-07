@@ -7,9 +7,6 @@ class TimeControl:
         self.increment = increment
 
 class BaseEngine:
-    name: str = "[BASE ENGINE]"
-    required_methods: list[str] = ["init", "go", "move"]
-
     def init(self, _tc: TimeControl, _fen: str | None = None) -> None:
         """ Initializes the engine.
 

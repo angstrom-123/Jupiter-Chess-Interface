@@ -26,19 +26,20 @@ async function main() {
     board.load();
 
     // Finished loading
-    const loadingMenu: HTMLDivElement = document.getElementById("loading-menu")! as HTMLDivElement;
-    loadingMenu.style.display = "none";
+    const loadingBlock: HTMLDivElement = document.getElementById("loading-menu")! as HTMLDivElement;
+    loadingBlock.style.display = "none";
 
     // Game setup form
     const form: HTMLFormElement = document.getElementById("setup-game-form")! as HTMLFormElement;
     const menu: HTMLDivElement = document.getElementById("setup-game-menu")! as HTMLDivElement;
-    form.addEventListener("submit", async (e) => formSubmit(e, board, menu));
+    form.addEventListener("submit", async (e) => formSubmit(e, board, menu, loadingBlock));
 
     board.setForm(form, menu);
 }
 
-async function formSubmit(e: SubmitEvent, board: Board, menu: HTMLDivElement) {
+async function formSubmit(e: SubmitEvent, board: Board, menu: HTMLDivElement, loadingBlock: HTMLDivElement) {
     e.preventDefault();
+    loadingBlock.style.display = "flex";
     menu.style.display = "none";
 
     const formElement: HTMLFormElement = e.target! as HTMLFormElement;
@@ -62,6 +63,8 @@ async function formSubmit(e: SubmitEvent, board: Board, menu: HTMLDivElement) {
         },
         timeControl: timeControl,
     });
+
+    loadingBlock.style.display = "none";
 }
 
 await main();

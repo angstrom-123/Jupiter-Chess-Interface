@@ -70,6 +70,7 @@ export class Board {
     private awaitingGameStart: boolean = false;
     private initialised: boolean = false;
     private resignConfirmActive: boolean = false;
+    private isGameOver: boolean = false;
 
     private whiteTimer: CountdownTimer | undefined;
     private blackTimer: CountdownTimer | undefined;
@@ -247,6 +248,8 @@ export class Board {
     }
 
     private async gameOver(reason: GameOverReason) {
+        this.isGameOver = true;
+
         this.whiteTimer!.stop();
         this.blackTimer!.stop();
 
@@ -369,21 +372,23 @@ export class Board {
                 : this.blackTimer!.getMs();
         const moveLan: string = await api.bestMove(timeMs);
         const move: Move = Move.fromLan(this.controller.getState(), moveLan);
-        this.controller.makeMove(move);
 
-        this.renderer.drawPieces(this.controller.getState());
+        if (!this.isGameOver) {
+            this.controller.makeMove(move);
+            this.renderer.drawPieces(this.controller.getState());
 
-        await api.makeMove(moveLan);
-        
-        const reason: GameOverReason = this.controller.isGameOver();
-        if (reason !== GameOverReason.NONE) {
-            await this.gameOver(reason);
-            return
+            const reason: GameOverReason = this.controller.isGameOver();
+            if (reason !== GameOverReason.NONE) {
+                await this.gameOver(reason);
+                return
+            }
+
+            this.countdownTurn();
+
+            await api.makeMove(moveLan);
+            if (this.isEngineTurn()) await this.engineMove();
         }
-
-        this.countdownTurn();
-
-        if (this.isEngineTurn()) await this.engineMove();
+        
     }
 
     private async onMouseDown(e: MouseEvent) {
@@ -425,24 +430,27 @@ export class Board {
                     target,
                     promote,
                 );
-                this.controller.makeMove(move);
-
                 this.selected = -1;
-                this.renderer.clearSelected();
-                this.renderer.clearHighlighted();
-                this.renderer.drawBoard();
-                this.renderer.drawPieces(this.controller.getState());
 
-                await api.makeMove(move.toLan());
+                if (!this.isGameOver) {
+                    this.controller.makeMove(move);
 
-                const reason: GameOverReason = this.controller.isGameOver();
-                if (reason !== GameOverReason.NONE) {
-                    await this.gameOver(reason);
-                    return
+                    this.renderer.clearSelected();
+                    this.renderer.clearHighlighted();
+                    this.renderer.drawBoard();
+                    this.renderer.drawPieces(this.controller.getState());
+
+                    const reason: GameOverReason = this.controller.isGameOver();
+                    if (reason !== GameOverReason.NONE) {
+                        await this.gameOver(reason);
+                        return
+                    }
+
+                    this.countdownTurn();
+
+                    await api.makeMove(move.toLan());
+                    if (this.isEngineTurn()) await this.engineMove();
                 }
-                this.countdownTurn();
-
-                if (this.isEngineTurn()) await this.engineMove();
             } else {
                 this.selected = -1;
                 this.renderer.clearSelected();
@@ -472,24 +480,27 @@ export class Board {
                     target,
                     promote,
                 );
-                this.controller.makeMove(move);
-                await api.makeMove(move.toLan());
-
                 this.selected = -1;
-                this.renderer.clearSelected();
-                this.renderer.clearHighlighted();
-                this.renderer.drawBoard();
 
-                this.renderer.drawPieces(this.controller.getState());
+                if (!this.isGameOver) {
+                    this.controller.makeMove(move);
 
-                const reason: GameOverReason = this.controller.isGameOver();
-                if (reason !== GameOverReason.NONE) {
-                    await this.gameOver(reason);
-                    return
+                    this.renderer.clearSelected();
+                    this.renderer.clearHighlighted();
+                    this.renderer.drawBoard();
+                    this.renderer.drawPieces(this.controller.getState());
+
+                    const reason: GameOverReason = this.controller.isGameOver();
+                    if (reason !== GameOverReason.NONE) {
+                        await this.gameOver(reason);
+                        return
+                    }
+
+                    this.countdownTurn();
+
+                    await api.makeMove(move.toLan());
+                    if (this.isEngineTurn()) await this.engineMove();
                 }
-
-                this.countdownTurn();
-                if (this.isEngineTurn()) await this.engineMove();
             }
         }
         this.renderer.drawPieces(this.controller.getState());

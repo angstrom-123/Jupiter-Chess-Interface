@@ -453,12 +453,12 @@ export class BoardController {
         fen += " ";
 
         // Half move counter
-        fen += char(char("0").code + this.state.halfMoveCounter).char;
+        fen += this.state.halfMoveCounter.toString();
 
         fen += " ";
 
         // Full move counter
-        fen += char(char("0").code + this.state.fullMoveCounter).char;
+        fen += this.state.fullMoveCounter.toString();
 
         return fen;
     }

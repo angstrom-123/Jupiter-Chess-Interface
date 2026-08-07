@@ -1,5 +1,6 @@
 import mimetypes
 import json
+import subprocess
 from typing import ClassVar, Literal
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import FileResponse
 
 from framework.base_engine import BaseEngine, TimeControl
-from src.discovery import Discovery
+from src.loader import Loader
 
 # ==================== App Definitions ==================== 
 
@@ -20,13 +21,20 @@ class State(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
     
     turn: Color = "white"
+
     white_engine: BaseEngine | None = None
+    white_engine_process: subprocess.Popen[str] | None = None
+
     black_engine: BaseEngine | None = None
+    black_engine_process: subprocess.Popen[str] | None = None
 
 # ==================== App Data ==================== 
 
-discovery: Discovery = Discovery()
-engines: dict[str, type[BaseEngine]] = discovery.discover()
+loader: Loader = Loader()
+engines: dict[str, Path] = {}
+for dir_path in loader.engine_dirs:
+    engines[dir_path.name] = dir_path
+
 state: State = State() 
 
 # ==================== Request / Reponse Body Structures ==================== 
@@ -67,7 +75,7 @@ async def game_start(request: Request):
         if info.white_player not in engines:
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
-        state.white_engine = engines[info.white_player]()
+        state.white_engine, state.white_engine_process = loader.launch_engine(engines[info.white_player])
         state.white_engine.init(tc, info.fen)
 
     if info.black_player != "Local":
@@ -75,7 +83,7 @@ async def game_start(request: Request):
         if info.black_player not in engines:
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
-        state.black_engine = engines[info.black_player]()
+        state.black_engine, state.black_engine_process = loader.launch_engine(engines[info.black_player])
         state.black_engine.init(tc, info.fen)
 
     state.turn = "white";
@@ -110,7 +118,7 @@ async def best_move(request: Request):
         status_code=status.HTTP_200_OK,
         media_type="application/json",
         content=json.dumps({
-            "move_lan": move
+            "move_lan": str(move).strip()[1:-1]
         })
     )
 

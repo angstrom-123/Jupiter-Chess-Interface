@@ -82,12 +82,12 @@ export class Move {
 
     public static fromLan(state: BoardState, lan: string): Move {
         if (lan.length !== 4 && lan.length !== 5)
-            throw new Error("Failed to parse LAN - Bad length");
+            throw new Error(`Failed to parse LAN '${lan}'- Bad length`);
 
         function index(chars: string): number {
             if (chars.length != 2)
                 throw new Error(
-                    "Failed to parse LAN - Need 2 chars to convert to index (e.g., e4)",
+                    `Failed to parse LAN piece '${chars}'- Need 2 chars to convert to index (e.g., e4)`,
                 );
 
             const x: number = chars.charCodeAt(0) - char("a").code;
@@ -113,7 +113,7 @@ export class Move {
                     promote = Piece.QUEEN;
                     break;
                 default:
-                    throw new Error("Failed to parse LAN - Bad promotion");
+                    throw new Error(`Failed to parse LAN '${lan}'- Bad promotion`);
             }
             move.promote = promote;
         }

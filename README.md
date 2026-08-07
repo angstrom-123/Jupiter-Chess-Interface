@@ -62,6 +62,14 @@ Access at localhost:port (default http://localhost:8000).
 
 ### Writing an Engine
 
+#### Architecture
+
+- Your engine will go in the `engines/` folder 
+- Your engine will implement the abstract class `BaseEngine` from `framework.base_engine`
+- After setup, you should move your engine to a separate repo and link it as a submodule (like I have done with [Jupiter Engine](https://github.com/angstrom-123/Jupiter-Chess-Engine))
+- If your engine uses python, then make sure you have a virtual environment set up inside your engine folder with your dependencies
+- Compiled engines must be built manually before the client can interact with them
+
 #### Step 1 - Setup Your Project
 
 - Create a new folder inside of `engines` for your engine
@@ -69,8 +77,10 @@ Access at localhost:port (default http://localhost:8000).
 - Create an empty file named exactly `__init__.py` to register your module
 - Create a new python file. This will be your interface with Jupiter Client. You can call it anything, for example `example_engine.py`
 - Inside this file, import required classes: `from framework.base_engine import BaseEngine, TimeControl`
-- Also import the `override` annotation: `from typing_extensions import override`
+- Also import the `override` annotation: `from typing import override`
 - Create a class for your engine that inherits from `BaseEngine`. Name it what you like, for example `class ExampleEngine(BaseEngine):`
+- If you wish to use python for your engine, create a virtual environment directly inside your engine folder for all dependencies
+- If you wish to use another language, you must make sure that it is compiled and ready for use in the python interface file 
 
 #### Step 2 - Implement The API
 
@@ -89,27 +99,18 @@ The methods that you must implement are:
   - This move will arrive in the same UCI LAN as described above
   - The move will be legal, but may not be the one that your engine generated with `go`
 
-You must also give your engine a name by declaring a static variable `name` like so:
-```python 
-class ExampleEngine(BaseEngine):
-    name: str = "Example Engine"
-    ...
-```
-
 ### Example Engine
 
 Here is an example of a dummy engine to illustrate the format of your interface.
 For a fully implemented example, refer to Jupiter engine (`engines/jupiter/jupiter.py`).
 
 ```python
-from typing_extensions import override
+from typing import override
 from framework.base_engine import BaseEngine, TimeControl
 
 # Import your engine implementation here
 
 class ExampleEngine(BaseEngine):
-    name: str = "Example Engine"
-
     # Add any other members you want here 
 
     @override
