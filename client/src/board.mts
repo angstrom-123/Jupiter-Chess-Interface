@@ -265,6 +265,7 @@ export class Board {
             throw new Error("Setup form or setup menu are not assigned");
 
         this.initialised = false;
+        this.isGameOver = false;
         this.controller = new BoardController(
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         );

@@ -52,6 +52,8 @@ async function formSubmit(e: SubmitEvent, board: Board, menu: HTMLDivElement, lo
     const { time, increment } = timeControlLookup.get(timeControl)!;
     await api.gameStart(FEN, whitePlayer, blackPlayer, time, increment);
 
+    loadingBlock.style.display = "none";
+
     await board.init({
         whitePlayer: {
             name: whitePlayer,
@@ -63,8 +65,6 @@ async function formSubmit(e: SubmitEvent, board: Board, menu: HTMLDivElement, lo
         },
         timeControl: timeControl,
     });
-
-    loadingBlock.style.display = "none";
 }
 
 await main();
