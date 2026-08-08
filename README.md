@@ -68,19 +68,21 @@ Access at localhost:port (default http://localhost:8000).
 - Your engine will implement the abstract class `BaseEngine` from `framework.base_engine`
 - If your engine uses python, then make sure you have a virtual environment set up inside your engine folder with your dependencies
 - You should work in a fork of this repository and have your engine in a separate repo linked as a submodule
-  - More details are available in [contributors.md](CONTRIBUTORS.md)
+  - More details are available in [contributors](CONTRIBUTORS.md)
 
 #### Step 1 - Setup Your Project
 
-1. Create a new folder inside of `engines` for your engine
-2. Go inside your new engine folder
-3. Create an empty file named exactly `__init__.py` to register your module
-4. Create a new python file. This will be your interface with Jupiter Client. You can call it anything, for example `example_engine.py`
-5. Inside this file, import required classes: `from framework.base_engine import BaseEngine, TimeControl`
-6. Also import the `override` annotation: `from typing import override`
-7. Create a class for your engine that inherits from `BaseEngine`. Name it what you like, for example `class ExampleEngine(BaseEngine):`
-8. If you wish to use python for your engine, create a virtual environment directly inside your engine folder for all dependencies
-9. If you wish to use another language, you must make sure that it is compiled and ready for use in the python interface file 
+These steps show you how to set up your engine to interact with Jupiter, details on setting up your project are found in [contributors](CONTRIBUTORS.md)
+Any build-system / language is supported as long as it can interact with python for the API implementation.
+You must ensure that your engine is built and installed so that it will work when running the client
+
+1. In your engine folder, create an empty file called `__init__.py` to register your module 
+2. Create a python file to be your interface for Jupiter's server, you can call it anything you like 
+3. Inside this python file import the required modules
+   - `from framework.base_engine import BaseEngine, TimeControl`
+   - `from typing import override`
+4. Create a class for your engine that inherits from `BaseEngine`
+5. If using python dependencies, create a virtual environment (`.venv/`) for these
 
 #### Step 2 - Implement The API
 
