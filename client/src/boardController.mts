@@ -52,7 +52,7 @@ export function showColor(color: Color): string {
     }
 }
 
-export class Coordinate {
+export class BoardCoordinate {
     public x: number;
     public y: number;
 
@@ -61,8 +61,8 @@ export class Coordinate {
         this.y = y;
     }
 
-    public static fromIndex(index: number): Coordinate {
-        return new Coordinate(index % 8, Math.floor(index / 8));
+    public static fromIndex(index: number): BoardCoordinate {
+        return new BoardCoordinate(index % 8, Math.floor(index / 8));
     }
 
     public toIndex(): number {
@@ -73,22 +73,24 @@ export class Coordinate {
         return this.x >= 0 && this.x <= 7 && this.y >= 0 && this.y <= 7;
     }
 
-    public mul(x: number): Coordinate {
-        return new Coordinate(this.x * x, this.y * x);
+    public mul(x: number): BoardCoordinate {
+        return new BoardCoordinate(this.x * x, this.y * x);
     }
 
-    public add(coord: Coordinate): Coordinate;
-    public add(x: number, y: number): Coordinate;
-    public add(first: Coordinate | number, second?: number): Coordinate {
-        if (first instanceof Coordinate) return new Coordinate(this.x + first.x, this.y + first.y);
-        else return new Coordinate(this.x + first, this.y + second!);
+    public add(coord: BoardCoordinate): BoardCoordinate;
+    public add(x: number, y: number): BoardCoordinate;
+    public add(first: BoardCoordinate | number, second?: number): BoardCoordinate {
+        if (first instanceof BoardCoordinate)
+            return new BoardCoordinate(this.x + first.x, this.y + first.y);
+        else return new BoardCoordinate(this.x + first, this.y + second!);
     }
 
-    public sub(coord: Coordinate): Coordinate;
-    public sub(x: number, y: number): Coordinate;
-    public sub(first: Coordinate | number, second?: number): Coordinate {
-        if (first instanceof Coordinate) return new Coordinate(this.x - first.x, this.y - first.y);
-        else return new Coordinate(this.x - first, this.y - second!);
+    public sub(coord: BoardCoordinate): BoardCoordinate;
+    public sub(x: number, y: number): BoardCoordinate;
+    public sub(first: BoardCoordinate | number, second?: number): BoardCoordinate {
+        if (first instanceof BoardCoordinate)
+            return new BoardCoordinate(this.x - first.x, this.y - first.y);
+        else return new BoardCoordinate(this.x - first, this.y - second!);
     }
 }
 
@@ -256,8 +258,7 @@ export class BoardController {
 
             if (this.attacks[oppositeColor(this.state.turn)]![kingSquare])
                 return GameOverReason.CHECKMATE;
-            else 
-                return GameOverReason.STALEMATE;
+            else return GameOverReason.STALEMATE;
         }
 
         // Stalemate (material)
@@ -282,16 +283,14 @@ export class BoardController {
                 break;
             }
         }
-        if (!hasEnoughMaterial)
-            return GameOverReason.STALEMATE;
+        if (!hasEnoughMaterial) return GameOverReason.STALEMATE;
 
         // Repetition
-        const positions: Map<bigint, number> = new Map<bigint, number>;
+        const positions: Map<bigint, number> = new Map<bigint, number>();
         for (const hash of this.positionHistory) {
             const count: number | undefined = positions.get(hash);
-            const newCount = (count) ? count + 1 : 1;
-            if (newCount === 3)
-                return GameOverReason.REPETITION;
+            const newCount = count ? count + 1 : 1;
+            if (newCount === 3) return GameOverReason.REPETITION;
             positions.set(hash, newCount);
         }
 
@@ -477,39 +476,7 @@ export class BoardController {
     }
 
     public showPieces() {
-        var line: string = "";
-        for (let i: number = 0; i < 64; i++) {
-            if (i % 8 === 0) {
-                line += "\n";
-            }
-
-            const square: Square = this.state.pieces[i]!;
-            switch (square.piece) {
-                case Piece.PAWN:
-                    line += square.color === Color.WHITE ? "P" : "p";
-                    break;
-                case Piece.KNIGHT:
-                    line += square.color === Color.WHITE ? "N" : "n";
-                    break;
-                case Piece.BISHOP:
-                    line += square.color === Color.WHITE ? "B" : "b";
-                    break;
-                case Piece.ROOK:
-                    line += square.color === Color.WHITE ? "R" : "r";
-                    break;
-                case Piece.QUEEN:
-                    line += square.color === Color.WHITE ? "Q" : "q";
-                    break;
-                case Piece.KING:
-                    line += square.color === Color.WHITE ? "K" : "k";
-                    break;
-                default:
-                    line += ".";
-                    break;
-            }
-            line += " ";
-        }
-        console.log(line + "\n");
+        this.state.showPieces();
     }
 
     private updateAttacks() {
@@ -526,12 +493,12 @@ export class BoardController {
         const moves: number[] = [];
         const enemy: Color = oppositeColor(color);
         const direction: number = color === Color.WHITE ? -1 : 1;
-        const coord: Coordinate = Coordinate.fromIndex(index);
+        const coord: BoardCoordinate = BoardCoordinate.fromIndex(index);
 
-        const singlePush: Coordinate = coord.add(0, direction);
+        const singlePush: BoardCoordinate = coord.add(0, direction);
         if (singlePush.inBounds() && !pieceValid(this.state.pieces[singlePush.toIndex()]!.piece)) {
             moves.push(singlePush.toIndex());
-            const doublePush: Coordinate = singlePush.add(0, direction);
+            const doublePush: BoardCoordinate = singlePush.add(0, direction);
             if (
                 doublePush.inBounds() &&
                 !pieceValid(this.state.pieces[doublePush.toIndex()]!.piece)
@@ -539,8 +506,8 @@ export class BoardController {
                 moves.push(doublePush.toIndex());
         }
 
-        const takesLeft: Coordinate = coord.add(-1, direction);
-        const takesRight: Coordinate = coord.add(1, direction);
+        const takesLeft: BoardCoordinate = coord.add(-1, direction);
+        const takesRight: BoardCoordinate = coord.add(1, direction);
         for (const attack of [takesLeft, takesRight]) {
             if (
                 (attack.inBounds() && this.state.pieces[attack.toIndex()]!.color === enemy) ||
@@ -555,10 +522,10 @@ export class BoardController {
     private pawnAttacks(index: number, color: Color): number[] {
         const moves: number[] = [];
         const direction: number = color === Color.WHITE ? -1 : 1;
-        const coord: Coordinate = Coordinate.fromIndex(index);
+        const coord: BoardCoordinate = BoardCoordinate.fromIndex(index);
 
-        const takesLeft: Coordinate = coord.add(-1, direction);
-        const takesRight: Coordinate = coord.add(1, direction);
+        const takesLeft: BoardCoordinate = coord.add(-1, direction);
+        const takesRight: BoardCoordinate = coord.add(1, direction);
         for (const attack of [takesLeft, takesRight]) {
             if (attack.inBounds() || attack.toIndex() === this.state.enPassantIndex)
                 moves.push(attack.toIndex());
@@ -570,9 +537,9 @@ export class BoardController {
     private knightMoves(index: number, color: Color): number[] {
         const moves: number[] = [];
         const enemy: Color = oppositeColor(color);
-        const coord: Coordinate = Coordinate.fromIndex(index);
+        const coord: BoardCoordinate = BoardCoordinate.fromIndex(index);
 
-        const moveCoords: Coordinate[] = [
+        const moveCoords: BoardCoordinate[] = [
             coord.add(1, 2),
             coord.add(2, 1),
             coord.add(2, -1),
@@ -608,7 +575,7 @@ export class BoardController {
         const moves: number[] = [];
         const enemy: Color = oppositeColor(color);
         const attacks: boolean[] = this.attacks[enemy]!;
-        const coord: Coordinate = Coordinate.fromIndex(index);
+        const coord: BoardCoordinate = BoardCoordinate.fromIndex(index);
 
         const shortIndices: number[] = [index + 1, index + 2];
         const longIndices: number[] = [index - 1, index - 2];
@@ -630,7 +597,7 @@ export class BoardController {
             }
         }
 
-        const moveCoords: Coordinate[] = [
+        const moveCoords: BoardCoordinate[] = [
             coord.add(1, 1),
             coord.add(1, 0),
             coord.add(1, -1),
@@ -654,9 +621,9 @@ export class BoardController {
     private kingAttacks(index: number, color: Color): number[] {
         const moves: number[] = [];
         const enemy: Color = oppositeColor(color);
-        const coord: Coordinate = Coordinate.fromIndex(index);
+        const coord: BoardCoordinate = BoardCoordinate.fromIndex(index);
 
-        const moveCoords: Coordinate[] = [
+        const moveCoords: BoardCoordinate[] = [
             coord.add(1, 1),
             coord.add(1, 0),
             coord.add(1, -1),
@@ -684,24 +651,24 @@ export class BoardController {
     ): number[] {
         const moves: number[] = [];
         const enemy: Color = oppositeColor(color);
-        const startCoord: Coordinate = Coordinate.fromIndex(index);
+        const startCoord: BoardCoordinate = BoardCoordinate.fromIndex(index);
 
-        const offsets: Coordinate[] = [
-            new Coordinate(0, 1),
-            new Coordinate(0, -1),
-            new Coordinate(1, 0),
-            new Coordinate(-1, 0),
-            new Coordinate(1, 1),
-            new Coordinate(1, -1),
-            new Coordinate(-1, 1),
-            new Coordinate(-1, -1),
+        const offsets: BoardCoordinate[] = [
+            new BoardCoordinate(0, 1),
+            new BoardCoordinate(0, -1),
+            new BoardCoordinate(1, 0),
+            new BoardCoordinate(-1, 0),
+            new BoardCoordinate(1, 1),
+            new BoardCoordinate(1, -1),
+            new BoardCoordinate(-1, 1),
+            new BoardCoordinate(-1, -1),
         ];
         const start: number = orthogonal ? 0 : 4;
         const end: number = diagonal ? 8 : 4;
 
         for (let i: number = start; i < end; i++) {
             for (let distance: number = 1; distance < 8; distance++) {
-                const coord: Coordinate = startCoord.add(offsets[i]!.mul(distance));
+                const coord: BoardCoordinate = startCoord.add(offsets[i]!.mul(distance));
                 if (!coord.inBounds()) break;
 
                 const square: Square = this.state.pieces[coord.toIndex()]!;

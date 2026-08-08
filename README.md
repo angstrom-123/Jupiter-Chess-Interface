@@ -1,5 +1,8 @@
 # Jupiter Chess Interface
 
+> [!NOTE]
+> Please clone recursively to also get access to engines bundled with this repo.
+
 ## Prerequisites
 - Python >=3.12
 - Astral uv
@@ -55,9 +58,6 @@ fastapi run
 The active port will be listed by the `fastapi run` command (default 8000).
 Access at localhost:port (default http://localhost:8000).
 
-> [!NOTE]
-> [Jupiter Engine](https://github.com/angstrom-123/Jupiter-Chess-Engine) is bundled with this repo if you cloned recursively. It will not show up in the web client unless you build it. Follow the steps in Jupiter's documentation to do so if you wish.
-
 ## Develop
 
 ### Writing an Engine
@@ -72,9 +72,7 @@ Access at localhost:port (default http://localhost:8000).
 
 #### Step 1 - Setup Your Project
 
-These steps show you how to set up your engine to interact with Jupiter, details on setting up your project are found in [contributors](CONTRIBUTORS.md)
-Any build-system / language is supported as long as it can interact with python for the API implementation.
-You must ensure that your engine is built and installed so that it will work when running the client
+These steps show you how to set up your engine to interact with Jupiter, details on setting up your project are found in [contributors](CONTRIBUTORS.md). 
 
 1. In your engine folder, create an empty file called `__init__.py` to register your module 
 2. Create a python file to be your interface for Jupiter's server, you can call it anything you like 
@@ -94,17 +92,25 @@ The methods that you must implement are:
 2. go: `go(self, ms_left: int) -> str`
   - Come up with a move given the amount of time remaining in milliseconds
   - The response MUST be in UCI-flavoured LAN.
-    - Examples: e2e4, e7e5, e1g1 (white short castling), e7e8q (for promotion)
-    - Knights are notated as `n`, Kings are notated as `k`
+    - Examples: `"e2e4"`, `"e7e5"`, `"e1g1"` (white short castling), `"e7e8q"` (for promotion)
+    - Knights are notated as `"n"`, Kings are notated as `"k"`
 3. move: `move(self, move: str) -> None`
   - Apply a move to the engine's internal state
   - This move will arrive in the same UCI LAN as described above
   - The move will be legal, but may not be the one that your engine generated with `go`
 
+#### Step 3 - Prepare For Execution
+
+Any build system is supported, but you are responsible for installing any dependencies and compiling any source files prior to running the server.
+
+For example:
+- If you are using python and have external dependencies in your virtual environment, make sure these are all installed.
+- If you use a compiled language, make sure the source files are compiled.
+
 ### Example Engine
 
-Here is an example of a dummy engine to illustrate the format of your interface.
-For a fully implemented example, refer to Jupiter engine (`engines/jupiter/jupiter.py`).
+Here is an example of a dummy engine implementation to illustrate the format of your interface.
+For a fully implemented example, refer to [Jupiter Engine](https://.https://github.com/angstrom-123/Jupiter-Chess-Engine)
 
 ```python
 from typing import override

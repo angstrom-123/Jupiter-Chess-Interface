@@ -72,4 +72,40 @@ export class BoardState {
         this.halfMoveCounter = 0;
         this.fullMoveCounter = 1;
     }
+
+    public showPieces() {
+        var line: string = "";
+        for (let i: number = 0; i < 64; i++) {
+            if (i % 8 === 0) {
+                line += "\n";
+            }
+
+            const square: Square = this.pieces[i]!;
+            switch (square.piece) {
+                case Piece.PAWN:
+                    line += square.color === Color.WHITE ? "P" : "p";
+                    break;
+                case Piece.KNIGHT:
+                    line += square.color === Color.WHITE ? "N" : "n";
+                    break;
+                case Piece.BISHOP:
+                    line += square.color === Color.WHITE ? "B" : "b";
+                    break;
+                case Piece.ROOK:
+                    line += square.color === Color.WHITE ? "R" : "r";
+                    break;
+                case Piece.QUEEN:
+                    line += square.color === Color.WHITE ? "Q" : "q";
+                    break;
+                case Piece.KING:
+                    line += square.color === Color.WHITE ? "K" : "k";
+                    break;
+                default:
+                    line += ".";
+                    break;
+            }
+            line += " ";
+        }
+        console.log(line + "\n");
+    }
 }

@@ -1,5 +1,6 @@
 import {
     BoardController,
+    BoardCoordinate,
     Color,
     invalidPiece,
     oppositeColor,
@@ -254,11 +255,8 @@ export class Board {
         this.blackTimer!.stop();
 
         // Wait for a second so the user can register what happened
-        if (reason !== GameOverReason.RESIGNATION) {
-            await new Promise<void>((res, _rej) => {
-                setTimeout(() => { res(); }, 1000)
-            });
-        }
+        if (reason !== GameOverReason.RESIGNATION)
+            await new Promise<void>((res, _rej) => setTimeout(() => res(), 1000));
 
         const winner: Color = oppositeColor(this.controller.getState().turn);
         await this.showGameOverMenu(winner, reason);
@@ -383,12 +381,23 @@ export class Board {
 
         if (!this.isGameOver) {
             this.controller.makeMove(move);
-            this.renderer.drawPieces(this.controller.getState());
+            this.renderer.setHidden([move.from, move.to]);
+            this.renderer.animatePieceBetween(
+                move.piece,
+                move.color,
+                BoardCoordinate.fromIndex(move.from),
+                BoardCoordinate.fromIndex(move.to),
+                this.controller.getState(),
+                () => {
+                    this.renderer.clearHidden();
+                    this.renderer.drawPieces(this.controller.getState());
+                },
+            );
 
             const reason: GameOverReason = this.controller.isGameOver();
             if (reason !== GameOverReason.NONE) {
                 await this.gameOver(reason);
-                return
+                return;
             }
 
             this.countdownTurn();
@@ -396,7 +405,6 @@ export class Board {
             await api.makeMove(moveLan);
             if (this.isEngineTurn()) await this.engineMove();
         }
-        
     }
 
     private async onMouseDown(e: MouseEvent) {
@@ -424,7 +432,7 @@ export class Board {
             this.selected = target;
             this.isDragging = true;
             this.renderer.setSelected(this.selected);
-            this.renderer.setHidden(this.selected);
+            this.renderer.setHidden([this.selected]);
             this.renderer.setHighlighted(this.controller.getMoves(this.selected));
             this.renderer.drawBoard();
         } else if (this.selected !== -1) {
@@ -439,20 +447,32 @@ export class Board {
                     target,
                     promote,
                 );
-                this.selected = -1;
 
+                this.selected = -1;
                 if (!this.isGameOver) {
                     this.controller.makeMove(move);
 
                     this.renderer.clearSelected();
                     this.renderer.clearHighlighted();
                     this.renderer.drawBoard();
-                    this.renderer.drawPieces(this.controller.getState());
+
+                    this.renderer.setHidden([move.from, move.to]);
+                    this.renderer.animatePieceBetween(
+                        move.piece,
+                        move.color,
+                        BoardCoordinate.fromIndex(move.from),
+                        BoardCoordinate.fromIndex(move.to),
+                        this.controller.getState(),
+                        () => {
+                            this.renderer.clearHidden();
+                            this.renderer.drawPieces(this.controller.getState());
+                        },
+                    );
 
                     const reason: GameOverReason = this.controller.isGameOver();
                     if (reason !== GameOverReason.NONE) {
                         await this.gameOver(reason);
-                        return
+                        return;
                     }
 
                     this.countdownTurn();
@@ -503,7 +523,7 @@ export class Board {
                     const reason: GameOverReason = this.controller.isGameOver();
                     if (reason !== GameOverReason.NONE) {
                         await this.gameOver(reason);
-                        return
+                        return;
                     }
 
                     this.countdownTurn();

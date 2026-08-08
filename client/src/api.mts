@@ -55,6 +55,7 @@ export namespace api {
                 ms_left: timeLeftMs,
             },
         })) as BestMoveResponse;
+        console.log(`Best move: '${move_lan}'`);
         return move_lan;
     }
 

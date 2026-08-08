@@ -1,5 +1,5 @@
 import { char, type BoardState } from "./boardState.mjs";
-import { Color, Coordinate, Piece, pieceValid } from "./boardController.mjs";
+import { Color, BoardCoordinate, Piece, pieceValid } from "./boardController.mjs";
 
 export class BoardRenderer {
     private boardCanvas: HTMLCanvasElement;
@@ -17,7 +17,7 @@ export class BoardRenderer {
     private darkSquareHighlightHex: string = "#a34636";
     private darkSquareSelectedHex: string = "#fffd83";
 
-    private hidden: number = -1;
+    private hidden: number[] = [];
     private selected: number = -1;
     private highlighted: number[] = [];
     private flipped: boolean = false;
@@ -31,13 +31,13 @@ export class BoardRenderer {
         this.sprites = new Map<Piece, HTMLImageElement>();
     }
 
-    public getCoord(x: number, y: number): Coordinate {
-        const raw: Coordinate = new Coordinate(
+    public getCoord(x: number, y: number): BoardCoordinate {
+        const raw: BoardCoordinate = new BoardCoordinate(
             Math.floor((x / this.boardCanvas.clientWidth) * 8),
             Math.floor((y / this.boardCanvas.clientHeight) * 8),
         );
         if (!this.flipped) return raw;
-        return new Coordinate(7, 7).sub(raw);
+        return new BoardCoordinate(7, 7).sub(raw);
     }
 
     public async loadSprites() {
@@ -94,12 +94,12 @@ export class BoardRenderer {
         this.selected = -1;
     }
 
-    public setHidden(index: number) {
-        this.hidden = index;
+    public setHidden(indices: number[]) {
+        this.hidden = indices;
     }
 
     public clearHidden() {
-        this.hidden = -1;
+        this.hidden = [];
     }
 
     public drawBoard() {
@@ -165,7 +165,7 @@ export class BoardRenderer {
 
         for (let i: number = 0; i < 64; i++) {
             const { piece, color } = state.pieces[i]!;
-            if (pieceValid(piece) && i != this.hidden) {
+            if (pieceValid(piece) && !this.hidden.includes(i)) {
                 const sprite: HTMLImageElement = this.sprites.get(piece)!;
 
                 var r: number = Math.floor(i / 8);
@@ -207,13 +207,13 @@ export class BoardRenderer {
         const pieceScale = piece === Piece.ROOK ? this.rookScale : this.pieceScale;
         const pieceSize = squareSize * pieceScale;
 
-        const new_x = x - pieceSize / 2;
-        const new_y = y - pieceSize / 2;
+        x -= pieceSize / 2;
+        y -= pieceSize / 2;
 
         // We only load black sprites and then invert colors for white to avoid loading extra
         if (color === Color.WHITE) this.spriteCtx.filter = "invert(1)";
 
-        this.spriteCtx.drawImage(sprite, new_x, new_y, pieceSize, pieceSize);
+        this.spriteCtx.drawImage(sprite, x, y, pieceSize, pieceSize);
         this.spriteCtx.filter = "none";
     }
 
@@ -264,7 +264,7 @@ export class BoardRenderer {
 
         for (let i: number = 0; i < 64; i++) {
             const { piece, color } = state.pieces[i]!;
-            if (pieceValid(piece) && i != this.hidden) {
+            if (pieceValid(piece)) {
                 const sprite: HTMLImageElement = this.sprites.get(piece)!;
 
                 var r: number = Math.floor(i / 8);
@@ -291,6 +291,59 @@ export class BoardRenderer {
                 ctx.filter = "none";
             }
         }
+    }
+
+    public async animatePieceBetween(
+        piece: Piece,
+        color: Color,
+        start: BoardCoordinate,
+        end: BoardCoordinate,
+        state: BoardState,
+        onComplete: () => void,
+    ): Promise<void> {
+        // 150ms + 25ms per square moved
+        const dx: number = Math.abs(end.x - start.x);
+        const dy: number = Math.abs(end.y - start.y);
+        const animationMs: number = 150 + Math.sqrt(dx * dx + dy * dy) * 25;
+
+        const squareSize: number = this.spriteCanvas.width / 8;
+
+        // Pixel space coordinates to move between
+        const startX: number = start.x * squareSize + squareSize / 2;
+        const startY: number = start.y * squareSize + squareSize / 2;
+
+        const endX: number = end.x * squareSize + squareSize / 2;
+        const endY: number = end.y * squareSize + squareSize / 2;
+
+        // Speed at which to move
+        const rateX: number = (endX - startX) / animationMs;
+        const rateY: number = (endY - startY) / animationMs;
+
+        await new Promise<void>((res, _rej) => {
+            var lastTime: number = 0;
+            var posX: number = startX;
+            var posY: number = startY;
+            const animate = (timestamp: number) => {
+                if (lastTime === 0) lastTime = timestamp;
+
+                const deltaTime: number = timestamp - lastTime;
+                lastTime = timestamp;
+
+                posX += rateX * deltaTime;
+                posY += rateY * deltaTime;
+
+                this.drawPieces(state);
+                this.drawPiece(piece, color, posX, posY);
+
+                const finishedX = endX > startX ? posX >= endX : posX <= endX;
+                const finishedY = endY > startY ? posY >= endY : posY <= endY;
+                finishedX && finishedY ? res() : requestAnimationFrame(animate);
+            };
+
+            requestAnimationFrame(animate);
+        });
+
+        onComplete();
     }
 
     private async loadSprite(url: string): Promise<HTMLImageElement> {

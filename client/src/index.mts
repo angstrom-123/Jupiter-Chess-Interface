@@ -37,7 +37,12 @@ async function main() {
     board.setForm(form, menu);
 }
 
-async function formSubmit(e: SubmitEvent, board: Board, menu: HTMLDivElement, loadingBlock: HTMLDivElement) {
+async function formSubmit(
+    e: SubmitEvent,
+    board: Board,
+    menu: HTMLDivElement,
+    loadingBlock: HTMLDivElement,
+) {
     e.preventDefault();
     loadingBlock.style.display = "flex";
     menu.style.display = "none";
