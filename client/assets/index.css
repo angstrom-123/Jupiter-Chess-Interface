@@ -528,6 +528,7 @@ select {
     width: 100%;
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 5px;
+    backdrop-filter: blur(3px);
     z-index: 3;
 }
 

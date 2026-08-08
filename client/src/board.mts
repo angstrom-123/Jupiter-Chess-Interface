@@ -253,10 +253,12 @@ export class Board {
         this.whiteTimer!.stop();
         this.blackTimer!.stop();
 
-        requestAnimationFrame(() => {
-            this.renderer.drawBoardTo(this.gameOverCanvas);
-            this.renderer.drawPiecesTo(this.gameOverSpriteCanvas, this.controller.getState());
-        });
+        // Wait for a second so the user can register what happened
+        if (reason !== GameOverReason.RESIGNATION) {
+            await new Promise<void>((res, _rej) => {
+                setTimeout(() => { res(); }, 1000)
+            });
+        }
 
         const winner: Color = oppositeColor(this.controller.getState().turn);
         await this.showGameOverMenu(winner, reason);
@@ -280,6 +282,11 @@ export class Board {
     }
 
     private async showGameOverMenu(winner: Color, reason: GameOverReason): Promise<void> {
+        requestAnimationFrame(() => {
+            this.renderer.drawBoardTo(this.gameOverCanvas);
+            this.renderer.drawPiecesTo(this.gameOverSpriteCanvas, this.controller.getState());
+        });
+
         this.clickCover.style.display = "inline";
         this.gameOverMenu.style.display = "inline";
 
@@ -394,6 +401,7 @@ export class Board {
 
     private async onMouseDown(e: MouseEvent) {
         if (!this.initialised) return;
+        if (this.isGameOver) return;
 
         if (this.awaitingGameStart) this.gameStart();
 
@@ -464,6 +472,7 @@ export class Board {
 
     private async onMouseUp(e: MouseEvent) {
         if (!this.initialised) return;
+        if (this.isGameOver) return;
 
         const target: number = this.renderer.getCoord(e.offsetX, e.offsetY).toIndex();
 
@@ -526,6 +535,7 @@ export class Board {
 
     private async onMouseMove(e: MouseEvent) {
         if (!this.initialised) return;
+        if (this.isGameOver) return;
 
         if (this.isDragging) {
             this.renderer.drawPieces(this.controller.getState());
