@@ -28,7 +28,7 @@ class Loader:
                 self.engine_dirs.append(file)
         print("Discovered engine directories:\n", [str(f) for f in self.engine_dirs])
 
-    def launch_engine(self, engine_dir: Path) -> tuple[BaseEngine, subprocess.Popen[str]]:
+    def launch_engine(self, engine_dir: Path) -> tuple[BaseEngine, subprocess.Popen[bytes]]:
         engine_dir = engine_dir.resolve()
         venv_python: Path = engine_dir / ".venv" / "bin" / "python3"
         python_exec = str(venv_python) if venv_python.exists() else "python3"
@@ -55,7 +55,7 @@ class Loader:
         print(env["PYTHONPATH"])
 
         port: int = get_free_port()
-        proc: subprocess.Popen[str] = subprocess.Popen([python_exec, "src/run_engine.py", str(engine_dir), str(port)], text=True, env=env)
+        proc: subprocess.Popen[bytes] = subprocess.Popen([python_exec, "src/run_engine.py", str(engine_dir), str(port)], env=env)
         time.sleep(1.0)
 
         manager = EngineManager(address=("127.0.0.1", port), authkey=b"jupiter")

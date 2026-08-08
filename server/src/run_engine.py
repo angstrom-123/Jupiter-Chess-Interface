@@ -67,19 +67,31 @@ def load_engine(engine_dir: str) -> BaseEngine:
 
     raise ValueError(f"Could not find BaseEngine implementation in {engine_dir}")
 
-if __name__ == "__main__":
-    engine_dir: str = sys.argv[1]
-    port: int = int(sys.argv[2])
+def safe_go(ms_left: int) -> str:
+    raw: str = instance.go(ms_left)
+    # Strip out non alphanumeric chars
+    clean: str = repr(raw)
+    # Remove empty spaces
+    clean = clean.strip()
+    # Remove surrounding quotes
+    clean = clean[1:-1]
+    # Remove trailing character if promoting
+    if len(clean) > 4:
+        clean = clean[:-1]
+    return clean
 
-    instance: BaseEngine = load_engine(engine_dir)
+engine_dir: str = sys.argv[1]
+port: int = int(sys.argv[2])
 
-    class EngineManager(BaseManager): pass 
-    EngineManager.register("init", callable=instance.init)
-    EngineManager.register("go", callable=instance.go)
-    EngineManager.register("move", callable=instance.move)
+instance: BaseEngine = load_engine(engine_dir)
 
-    manager: EngineManager = EngineManager(address=("127.0.0.1", port), authkey=b"jupiter")
-    server: Server = manager.get_server()
+class EngineManager(BaseManager): pass 
+EngineManager.register("init", callable=instance.init)
+EngineManager.register("go", callable=safe_go)
+EngineManager.register("move", callable=instance.move)
 
-    print(f"Engine process started on port {port}", flush=True)
-    server.serve_forever()
+manager: EngineManager = EngineManager(address=("127.0.0.1", port), authkey=b"jupiter")
+server: Server = manager.get_server()
+
+print(f"Engine process started on port {port}", flush=True)
+server.serve_forever()

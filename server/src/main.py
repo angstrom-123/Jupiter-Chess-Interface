@@ -23,10 +23,10 @@ class State(BaseModel):
     turn: Color = "white"
 
     white_engine: BaseEngine | None = None
-    white_engine_process: subprocess.Popen[str] | None = None
+    white_engine_process: subprocess.Popen[bytes] | None = None
 
     black_engine: BaseEngine | None = None
-    black_engine_process: subprocess.Popen[str] | None = None
+    black_engine_process: subprocess.Popen[bytes] | None = None
 
 # ==================== App Data ==================== 
 
