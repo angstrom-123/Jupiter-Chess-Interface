@@ -123,7 +123,7 @@ export class FenParser {
             )
                 throw new Error("Failed to parse FEN - Bad character in en passant square");
             state.enPassantIndex =
-                col.code - char("a").code + 8 * (8 - (row.code - char("1").code));
+                col.code - char("a").code + 8 * (7 - (row.code - char("1").code));
         } else {
             throw new Error("Failed to parse FEN - Bad en passant square");
         }

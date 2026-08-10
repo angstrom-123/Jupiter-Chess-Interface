@@ -501,7 +501,8 @@ export class BoardController {
             const doublePush: BoardCoordinate = singlePush.add(0, direction);
             if (
                 doublePush.inBounds() &&
-                !pieceValid(this.state.pieces[doublePush.toIndex()]!.piece)
+                !pieceValid(this.state.pieces[doublePush.toIndex()]!.piece) &&
+                coord.y === (color === Color.WHITE ? 6 : 1)
             )
                 moves.push(doublePush.toIndex());
         }
