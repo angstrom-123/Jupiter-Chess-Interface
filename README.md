@@ -141,4 +141,19 @@ class ExampleEngine(BaseEngine):
         # Apply a UCI LAN move to your engine here
 
         raise NotImplementedError("Please implement this method")
+
+    @override
+    def game_over(self) -> None:
+        
+        # You can add some logging here to show your engine metrics for debugging (not required)
+
+        return
+
+    @override
+    def show(self) -> str:
+
+        # You can add a way to visualise your engine state for debugging (not required)
+
+        return ""
 ```
+
