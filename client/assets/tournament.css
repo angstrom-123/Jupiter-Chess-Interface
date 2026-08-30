@@ -23,10 +23,6 @@ div {
     color: var(--white);
 }
 
-hr {
-    width: 100%;
-}
-
 button {
     font-family: "Arial";
     color: var(--white);
@@ -125,7 +121,7 @@ div p {
     position: relative;
     width: 100%;
     height: 100%;
-    min-width: 450px;
+    min-width: 400px;
 }
 
 .cards-container {
@@ -136,6 +132,70 @@ div p {
     row-gap: 30px;
     border-radius: 5px;
     box-sizing: border-box;
+}
+
+.middle-card {
+    height: 64px;
+    display: grid;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--dark-gray);
+    border-radius: 5px;
+    grid-template-columns: auto auto auto;
+    padding: 30px;
+}
+
+.middle-card button {
+    position: relative;
+    height: 64px;
+    aspect-ratio: 1;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    font-size: 22pt;
+    font-weight: bold;
+}
+
+.middle-card button img {
+    position: absolute;
+    aspect-ratio: 1;
+    filter: invert(1);
+}
+
+.card {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: var(--dark-gray);
+    grid-template-rows: auto auto;
+    padding: 25px;
+    border-radius: 5px;
+}
+
+.card-name {
+    display: flex;
+    box-sizing: border-box;
+    border-radius: 3px;
+    font-size: 36pt;
+    color: var(--white);
+    align-items: center;
+    justify-content: center;
+}
+
+.card-timer {
+    display: flex;
+    margin: 0px auto;
+    width: fit-content;
+    padding: 0px 15px 0px 15px;
+    box-sizing: border-box;
+    border-radius: 3px;
+    font-size: 72pt;
+    color: var(--white);
+    align-items: center;
+    justify-content: center;
 }
 
 .board-container {
@@ -167,6 +227,27 @@ div p {
     z-index: 2;
 }
 
+.loading-menu {
+    position: absolute;
+    display: flex;
+    padding: 25px;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: var(--dark-gray);
+    border-radius: 5px;
+    z-index: 2;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-menu p {
+    font-size: 22pt;
+    font-weight: bold;
+}
+
 .popup-menu {
     position: absolute;
     padding: 25px;
@@ -190,54 +271,28 @@ div p {
     font-weight: bold;
 }
 
-.body-container {
+.popup-menu form {
     display: grid;
     row-gap: 25px;
 }
 
-.body-container label {
+.popup-menu form label {
     font-size: 14pt;
 }
 
-.controls-container {
-    display: none;
-    row-gap: 25px;
+.play-as-container {
+    display: grid;
+    row-gap: 15px;
 }
 
-.button-container {
-    display: flex;
-    justify-content: space-between;
+.play-against-container {
+    display: grid;
+    row-gap: 15px;
 }
 
-.button-container div {
-    position: relative;
-    display: flex;
-    height: 100%;
-    flex-direction: row;
-}
-
-.button-container div div{
-    display: inline;
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    z-index: 10;
-}
-
-.button-container button {
-    height: 64px;
-    aspect-ratio: 1;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 5px;
-    font-size: 22pt;
-    font-weight: bold;
-}
-
-button img {
-    filter: invert(1);
+.time-control-container {
+    display: grid;
+    row-gap: 15px;
 }
 
 input[type=submit] {
@@ -256,29 +311,19 @@ input[type=submit]:hover {
     box-shadow: 0 0 14px var(--accent);
 }
 
-.loading-menu {
-    position: absolute;
-    display: flex;
-    padding: 25px;
-    top: 0px;
-    left: 0px;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    background-color: var(--dark-gray);
+input[type=radio] {
+    appearance: none;
+    width: 35px;
+    height: 35px;
     border-radius: 5px;
-    z-index: 2;
-    align-items: center;
-    justify-content: center;
+    outline-offset: 2px;
 }
 
-.loading-menu p {
-    font-size: 22pt;
-    font-weight: bold;
+input[type=radio]:checked {
+    outline: 2px solid var(--accent);
 }
 
-input[type=file] {
-    display: flex;
+select {
     background-color: var(--light-gray);
     border: none;
     height: 35px;
@@ -286,75 +331,36 @@ input[type=file] {
     border-radius: 5px;
     color: var(--white);
     font-size: 12pt;
-    padding: 5px;
+    padding-left: 10px;
+}
+
+.time-controls {
+    display: grid;
     box-sizing: border-box;
-    text-align: center;
+    grid-template-columns: repeat(auto-fit, 22.86%);
+    gap: 10px;
 }
 
-input[type=file]:hover {
-    background-color: var(--mid-gray);
-}
-
-::file-selector-button {
-    display: none;
-}
-
-.player-card {
-    display: flex;
-    height: 100px;
-    background-color: var(--mid-gray);
-    align-items: center;
-    border-radius: 5px;
-    padding: 10px;
-    box-sizing: border-box;
-}
-
-.description-container {
-    display: flex;
-    height: 100%;
+.time-controls input[type=radio] {
     width: 100%;
-    flex-direction: column;
-    gap: 0px;
-    padding: 10px 10px 15px 10px;
-    box-sizing: border-box;
-    justify-content: space-between;
-}
-
-.description-container p {
-    padding: 0px;
-    margin: 0px;
-}
-
-.description-container p:first-child {
-    font-size: 16pt;
-    font-weight: bold;
-}
-
-.image-container {
-    display: flex;
-    height: 100%;
-    aspect-ratio: 1;
     background-color: var(--light-gray);
+    margin: 0px;
+    padding: 0px;
+}
+
+.time-controls div {
+    position: relative;
+}
+
+.time-controls div label {
+    position: absolute;
+    display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 3px;
-}
-
-.image-container img {
-    height: 80%;
-}
-
-.promotion-container {
-    display: none;
-    position: absolute;
     top: 0px;
     left: 0px;
-    height: 100%;
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(3px);
-    border-radius: 5px;
-    z-index: 3;
+    height: 35px;
 }
 
 .fen-menu {
@@ -428,5 +434,18 @@ input[type=file]:hover {
 
 .fen-menu div button img {
     filter: invert(1);
+}
+
+.promotion-container {
+    display: none;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    backdrop-filter: blur(3px);
+    z-index: 3;
 }
 

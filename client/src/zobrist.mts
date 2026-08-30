@@ -1,5 +1,5 @@
-import type { BoardState } from "./boardState.mjs";
-import { Color, Piece, pieceValid } from "./boardController.mjs";
+import type { BoardState, Square } from "./boardState.mjs";
+import { Color, Piece } from "./boardController.mjs";
 
 // Romu Pseudorandom Number Generators
 //
@@ -90,7 +90,8 @@ export class ZobristTable {
         for (let color: Color = Color.WHITE; color < Color.MAX_ENUM; color++) {
             for (let piece: Piece = Piece.PAWN; piece < Piece.MAX_ENUM; piece++) {
                 for (let index: number = 0; index < 64; index++) {
-                    if (pieceValid(state.pieces[index]!.piece))
+                    const square: Square = state.pieces[index]!;
+                    if (square.piece === piece && square.color === color)
                         key ^= this.randoms[offset + index]!;
                 }
                 offset += 64;

@@ -578,23 +578,35 @@ export class BoardController {
         const attacks: boolean[] = this.attacks[enemy]!;
         const coord: BoardCoordinate = BoardCoordinate.fromIndex(index);
 
-        const shortIndices: number[] = [index + 1, index + 2];
-        const longIndices: number[] = [index - 1, index - 2];
+        const shortIndices = { safe: [index + 1, index + 2], free: [index + 1, index + 2] };
+        const longIndices = {
+            safe: [index - 1, index - 2],
+            free: [index - 1, index - 2, index - 3],
+        };
         if (!attacks[index]) {
             for (const side of [shortIndices, longIndices]) {
                 var canCastle: boolean =
-                    side[0]! > index
+                    side.safe[0]! > index
                         ? this.state.rights[color]!.kingside
                         : this.state.rights[color]!.queenside;
                 if (canCastle) {
-                    for (const index of side) {
-                        if (pieceValid(this.state.pieces[index]!.piece) || attacks[index]) {
+                    // Check that the castling path is unattacked
+                    for (const index of side.safe) {
+                        if (attacks[index]) {
+                            canCastle = false;
+                            break;
+                        }
+                    }
+
+                    // Check that the castling path is unobscured
+                    for (const index of side.free) {
+                        if (pieceValid(this.state.pieces[index]!.piece)) {
                             canCastle = false;
                             break;
                         }
                     }
                 }
-                if (canCastle) moves.push(side[side.length - 1]!);
+                if (canCastle) moves.push(side.safe[side.safe.length - 1]!);
             }
         }
 

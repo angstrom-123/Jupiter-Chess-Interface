@@ -10,9 +10,7 @@ import time
 from framework.base_engine import BaseEngine
 
 class EngineManager(BaseManager): pass 
-EngineManager.register("init")
-EngineManager.register("go")
-EngineManager.register("move")
+EngineManager.register("ChessEngine")
 
 def get_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -52,7 +50,6 @@ class Loader:
             additional_paths.append(current_python_path)
 
         env["PYTHONPATH"] = os.path.pathsep.join(additional_paths)
-        print(env["PYTHONPATH"])
 
         port: int = get_free_port()
         proc: subprocess.Popen[bytes] = subprocess.Popen([python_exec, "src/run_engine.py", str(engine_dir), str(port)], env=env)
@@ -61,7 +58,7 @@ class Loader:
         manager = EngineManager(address=("127.0.0.1", port), authkey=b"jupiter")
         manager.connect()
 
-        # Don't worry about it
-        remote_engine = cast(BaseEngine, cast(object, manager))
+        # Ignore the error trust me
+        remote_engine = manager.ChessEngine()
 
         return remote_engine, proc

@@ -37,8 +37,6 @@ export class Move {
         this.color = square.color;
         this.piece = square.piece;
 
-        console.log("to:", to);
-        state.showPieces();
         this.capture = state.pieces[to]!.piece;
         if (!pieceValid(this.capture) && this.piece === Piece.PAWN) {
             if (to === state.enPassantIndex) this.type = MoveType.EN_PASSANT;

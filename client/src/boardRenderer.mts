@@ -301,6 +301,11 @@ export class BoardRenderer {
         state: BoardState,
         onComplete: () => void,
     ): Promise<void> {
+        if (this.flipped) {
+            start = new BoardCoordinate(7, 7).sub(start);
+            end = new BoardCoordinate(7, 7).sub(end);
+        }
+
         // 150ms + 25ms per square moved
         const dx: number = Math.abs(end.x - start.x);
         const dy: number = Math.abs(end.y - start.y);

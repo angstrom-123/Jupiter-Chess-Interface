@@ -6,7 +6,7 @@ from pathlib import Path
 from multiprocessing.managers import BaseManager, Server
 from typing import cast
 
-from framework.base_engine import BaseEngine
+from framework.base_engine import BaseEngine, TimeControl
 
 def load_engine(engine_dir: str) -> BaseEngine:
     engine_path = Path(engine_dir).resolve()
@@ -16,21 +16,17 @@ def load_engine(engine_dir: str) -> BaseEngine:
     venv_site = Path(engine_dir) / ".venv" / "lib" / python / "site-packages"
     if venv_site.exists():
         sys.path.insert(0, str(venv_site.resolve()))
-        print(f"Added {str(venv_site.resolve())} to path")
 
     # Add engine path for local imports
     sys.path.insert(0, str(engine_path))
-    print(f"Added {str(engine_path)} to path")
 
     # Add Jupiter Client path for imports
     parent_dir: Path = Path(".").resolve().parent
     sys.path.insert(0, str(parent_dir))
-    print(f"Added {str(parent_dir)} to path")
 
     # Add engines path for imports
     engines_dir: Path = Path(".").resolve().parent / "engines"
     sys.path.insert(0, str(engines_dir))
-    print(f"Added {str(engines_dir)} to path")
 
     # Scan python files in engine dir
     print(f"Scanning {engine_path}")
@@ -67,28 +63,29 @@ def load_engine(engine_dir: str) -> BaseEngine:
 
     raise ValueError(f"Could not find BaseEngine implementation in {engine_dir}")
 
-def safe_go(ms_left: int) -> str:
-    raw: str = instance.go(ms_left)
-    # Strip out non alphanumeric chars
-    clean: str = repr(raw)
-    # Remove empty spaces
-    clean = clean.strip()
-    # Remove surrounding quotes
-    clean = clean[1:-1]
-    # Remove trailing character if promoting
-    if len(clean) > 4:
-        clean = clean[:-1]
-    return clean
-
 engine_dir: str = sys.argv[1]
 port: int = int(sys.argv[2])
 
 instance: BaseEngine = load_engine(engine_dir)
 
 class EngineManager(BaseManager): pass 
-EngineManager.register("init", callable=instance.init)
-EngineManager.register("go", callable=safe_go)
-EngineManager.register("move", callable=instance.move)
+class EngineService:
+    def init(self, tc: TimeControl, fen: str | None = None) -> None:
+        instance.init(tc, fen)
+
+    def go(self, ms_left: int) -> str | None:
+        return instance.go(ms_left)
+
+    def move(self, move: str) -> None:
+        instance.move(move)
+
+    def game_over(self) -> None:
+        instance.game_over()
+
+    def show(self) -> str:
+        return instance.show()
+
+EngineManager.register("ChessEngine", callable=EngineService)
 
 manager: EngineManager = EngineManager(address=("127.0.0.1", port), authkey=b"jupiter")
 server: Server = manager.get_server()

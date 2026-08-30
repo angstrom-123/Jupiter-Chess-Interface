@@ -47,6 +47,10 @@ a:active {
     background-color: var(--light-gray);
 }
 
+.active {
+    background-color: var(--mid-gray);
+}
+
 div p {
     margin: 10px;
     padding: 10px;

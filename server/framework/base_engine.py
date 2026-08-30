@@ -24,7 +24,7 @@ class BaseEngine:
         """
         raise NotImplementedError("Please implement this method")
 
-    def go(self, _ms_left: int) -> str:
+    def go(self, _ms_left: int) -> str | None:
         """ Searches for the best move given the amount of time left.
 
         Params:
@@ -34,7 +34,8 @@ class BaseEngine:
         Returns: 
                 The move it found in UCI-Flavoured LAN. Examples of this format
                 are 'e2e4', 'e7e5', 'e1g1' (white short castling), 'e7e8q' (for 
-                promotion.) Kings are notated as 'k' and knights as 'n'.
+                promotion.) Kings are notated as 'k' and knights as 'n'. Return 
+                None if there are no legal moves.
 
         The engine is expected to function in accordance with the rules.
         """
@@ -55,3 +56,24 @@ class BaseEngine:
         The engine is expected to function in accordance with the rules.
         """
         raise NotImplementedError("Please implement this method")
+
+    def game_over(self) -> None:
+        """ Called when the current game ends.
+
+        NOT REQUIRED
+
+        This is not a required method but is useful for printing out engine 
+        metrics at the conclusion of the game.
+        """
+        pass
+
+    def show(self) -> str:
+        """ Used for debugging.
+
+        NOT REQUIRED
+
+        This is not a required method but is useful for printing out engine 
+        state for debugging.
+        """
+        return repr(self)
+

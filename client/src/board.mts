@@ -13,8 +13,9 @@ import { Move } from "./move.mjs";
 import { CountdownTimer, type TimerDisplay } from "./countdown.mjs";
 import type { Square } from "./boardState.mjs";
 import { humanReadableId } from "./readableId.mjs";
+import { START_FEN } from "./fenParser.mjs";
 
-export const TimeControls = ["0:30", "1", "5", "10", "1+1", "5+5", "10+10"] as const;
+export const TimeControls = ["0:30", "1", "3", "5", "0:30+1", "1+1", "3+3", "5+5"] as const;
 export type TimeControl = (typeof TimeControls)[number];
 export interface TimeControlInfo {
     time: number;
@@ -26,11 +27,12 @@ export const timeControlLookup: Map<TimeControl, TimeControlInfo> = new Map<
 >([
     ["0:30", { time: 30, increment: 0 }],
     ["1", { time: 60, increment: 0 }],
+    ["3", { time: 180, increment: 0 }],
     ["5", { time: 300, increment: 0 }],
-    ["10", { time: 600, increment: 0 }],
+    ["0:30+1", { time: 30, increment: 1 }],
     ["1+1", { time: 60, increment: 1 }],
+    ["3+3", { time: 180, increment: 3 }],
     ["5+5", { time: 300, increment: 5 }],
-    ["10+10", { time: 600, increment: 10 }],
 ]);
 
 export enum GameOverReason {
@@ -254,6 +256,8 @@ export class Board {
         this.whiteTimer!.stop();
         this.blackTimer!.stop();
 
+        await api.gameOver();
+
         // Wait for a second so the user can register what happened
         if (reason !== GameOverReason.RESIGNATION)
             await new Promise<void>((res, _rej) => setTimeout(() => res(), 1000));
@@ -266,9 +270,7 @@ export class Board {
 
         this.initialised = false;
         this.isGameOver = false;
-        this.controller = new BoardController(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-        );
+        this.controller = new BoardController(START_FEN);
         if (this.renderer.isFlipped()) this.renderer.flipBoard();
         this.renderer.clearHidden();
         this.renderer.clearHighlighted();
@@ -377,6 +379,16 @@ export class Board {
                 ? this.whiteTimer!.getMs()
                 : this.blackTimer!.getMs();
         const moveLan: string = await api.bestMove(timeMs);
+        if (moveLan.length === 0) {
+            const reason: GameOverReason = this.controller.isGameOver();
+            if (reason !== GameOverReason.NONE) {
+                await this.gameOver(reason);
+                return;
+            } else {
+                console.error("Failed to find engine move but the game is not over");
+            }
+        }
+
         const move: Move = Move.fromLan(this.controller.getState(), moveLan);
 
         if (!this.isGameOver) {

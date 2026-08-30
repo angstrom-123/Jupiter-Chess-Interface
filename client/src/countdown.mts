@@ -7,17 +7,17 @@ export interface TimerDisplay {
 export interface TimerInfo {
     title: string;
     from: number;
-    increment: number;
     display: TimerDisplay;
-    onTimeout: () => void;
+    increment?: number;
+    onTimeout?: () => void;
 }
 
 export class CountdownTimer {
     private title: string;
     private countMs: number;
-    private incrementMs: number;
     private display: TimerDisplay;
-    private onTimeout: () => void;
+    private incrementMs: number;
+    private onTimeout: (() => void) | undefined;
 
     private isRunning: boolean = false;
     private startTime: number = 0;
@@ -29,7 +29,7 @@ export class CountdownTimer {
     constructor({ title, from, increment, display, onTimeout }: TimerInfo) {
         this.title = title;
         this.countMs = from * 1000;
-        this.incrementMs = increment * 1000;
+        this.incrementMs = increment ? increment * 1000 : 0;
         this.intervalMs = 100;
         this.display = display;
         this.display.time.innerText = this.formatTime();
@@ -41,13 +41,13 @@ export class CountdownTimer {
         this.isRunning = true;
         this.startTime = Date.now();
         this.expectedTime = this.startTime + this.intervalMs;
-        this.display.container.style.outline = `4px solid ${this.highlightCol}`;
+        this.showBorder();
 
         this.timeout = setTimeout(() => this.step(), this.intervalMs);
     }
 
     public stop() {
-        this.display.container.style.outline = "none";
+        this.hideBorder();
         if (this.incrementMs > 0) {
             this.countMs += this.incrementMs;
             this.display.time.innerText = this.formatTime();
@@ -55,6 +55,21 @@ export class CountdownTimer {
 
         this.isRunning = false;
         clearTimeout(this.timeout);
+    }
+
+    public setMs(timeMs: number) {
+        this.countMs = timeMs;
+
+        if (this.countMs > 0) this.display.time.innerText = this.formatTime();
+        else this.display.time.innerText = "00:00";
+    }
+
+    public showBorder() {
+        this.display.container.style.outline = `4px solid ${this.highlightCol}`;
+    }
+
+    public hideBorder() {
+        this.display.container.style.outline = "none";
     }
 
     public getMs(): number {
@@ -88,7 +103,7 @@ export class CountdownTimer {
             this.display.container.style.border = "none";
             this.countMs = 0;
             this.isRunning = false;
-            this.onTimeout();
+            if (this.onTimeout) this.onTimeout();
         }
     }
 

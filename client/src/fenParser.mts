@@ -1,6 +1,8 @@
 import { BoardState, char, Char, Square } from "./boardState.mjs";
 import { Color, Piece } from "./boardController.mjs";
 
+export const START_FEN: string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 interface FenChunk {
     start: number;
     end: number;

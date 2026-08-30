@@ -2,16 +2,16 @@
 <html>
 <head>
     <title>Jupiter Client</title>
-    <link rel="stylesheet" href="assets/index.css">
+    <link rel="stylesheet" href="assets/tournament.css">
 </head>
 
 <body>
     <div class="container">
         <div class="side-bar">
             <a href="/">Jupiter Client</a>
-            <a class="active" href="/">Play</a>
+            <a href="/">Play</a>
             <a href="/replay">Load</a>
-            <a href="/tournament">Tournament</a>
+            <a class="active" href="/tournament">Tournament</a>
             <a href="https://github.com/angstrom-123/Jupiter-Chess-Interface">Jupiter Client</a>
             <a href="https://github.com/angstrom-123/Jupiter-Chess-Engine">Jupiter Engine</a>
         </div>
@@ -41,24 +41,22 @@
                         </div>
                     </div>
                 </div>
-                <div id="setup-game-menu" class="popup-menu">
+                <div id="setup-tournament-menu" class="popup-menu">
                     <div class="heading-container">
                         <p>Game Setup</p>
                     </div>
-                    <form id="setup-game-form" onsubmit="return false;">
+                    <form id="setup-tournament-form" onsubmit="return false;">
                         <div class="play-against-container">
-                            <label>White Player</label>
+                            <label>Player 1</label>
                             <div class="play-against">
                                 <select id="white-player" name="white-player" value="white-player">
-                                    <option value="Local">Local</option>
                                 </select>
                             </div>
                         </div>
                         <div class="play-against-container">
-                            <label>Black Player</label>
+                            <label>Player 2</label>
                             <div class="play-against">
                                 <select id="black-player" name="black-player" value="black-player">
-                                    <option value="Local">Local</option>
                                 </select>
                             </div>
                         </div>
@@ -82,7 +80,7 @@
                                     <label for="5min">5 min</label>
                                 </div>
                                 <div>
-                                    <input type="radio" value="0:30+1" id="30sec" name="time-control">
+                                    <input type="radio" value="0:30+1" id="30sec+1" name="time-control">
                                     <label for="30sec+1">30s + 1</label>
                                 </div>
                                 <div>
@@ -99,6 +97,27 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="time-control-container">
+                            <label>Game Count</label>
+                            <div class="time-controls">
+                                <div>
+                                    <input type="radio" value="50" id="50" name="game-count">
+                                    <label for="50">50</label>
+                                </div>
+                                <div>
+                                    <input type="radio" value="100" id="100" name="game-count" checked="checked">
+                                    <label for="100">100</label>
+                                </div>
+                                <div>
+                                    <input type="radio" value="200" id="200" name="game-count">
+                                    <label for="200">200</label>
+                                </div>
+                                <div>
+                                    <input type="radio" value="500" id="500" name="game-count">
+                                    <label for="500">500</label>
+                                </div>
+                            </div>
+                        </div>
                         <input type="submit" value="Start Game">
                     </form>
                 </div>
@@ -107,25 +126,6 @@
                 </div>
             </div>
             <div class="board-container">
-                <div id="promotion-menu" class="promotion-container">
-                    <div class="promotion-menu">
-                        <p>Promote</p>
-                        <div class="promotion-buttons">
-                            <button id="promote-knight">
-                                <img src="assets/sprites/b_knight_svg_NoShadow.svg" class="promote-icon" draggable="false">
-                            </button>
-                            <button id="promote-bishop">
-                                <img src="assets/sprites/b_bishop_svg_NoShadow.svg" class="promote-icon" draggable="false">
-                            </button> 
-                            <button id="promote-rook">
-                                <img src="assets/sprites/b_rook_svg_NoShadow.svg" class="promote-icon" draggable="false">
-                            </button>
-                            <button id="promote-queen">
-                                <img src="assets/sprites/b_queen_svg_NoShadow.svg" class="promote-icon" draggable="false">
-                            </button>
-                        </div>
-                    </div>
-                </div>
                 <div id="fen-menu" class="promotion-container">
                     <div class="fen-menu">
                         <button class="close-button" id="close-fen"><img src="assets/icons/close.png" alt="Close" style="width: 100%;"></button>
@@ -136,24 +136,10 @@
                         </div>
                     </div>
                 </div>
-                <div id="game-over-menu" class="promotion-container">
-                    <div class="game-over-menu">
-                        <p>Game Over</p>
-                        <span id="game-over-span">[Color] won by [Condition]</span>
-                        <div class="canvas-container">
-                            <canvas id="mini-board-canvas" class="mini-board-canvas"></canvas>
-                            <canvas id="mini-sprite-canvas" class="mini-sprite-canvas"></canvas>
-                        </div>
-                        <div class="button-container">
-                            <button title="Download Game" id="download-game"><img src="assets/icons/download.png" alt="Download" style="width: 80%;"></button>
-                            <button title="Ok" id="game-over-ok"><img src="assets/icons/check.png" alt="Ok" style="width: 90%;"></button>
-                        </div>
-                    </div>
-                </div>
                 <canvas id="board-canvas" class="board-canvas"></canvas>
                 <canvas id="sprite-canvas" class="sprite-canvas"></canvas>
             </div>
         </div>
 </body>
-<script type="module" src="assets/dist/index.mjs" defer></script>
+<script type="module" src="assets/dist/tournament.mjs" defer></script>
 </html>
