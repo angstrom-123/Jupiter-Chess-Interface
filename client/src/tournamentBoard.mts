@@ -46,12 +46,12 @@ export class TournamentBoard {
     private drawHex: string = "#6e6e6e";
     private lossHex: string = "#ff0602";
 
-    private gameCount: number = 0;
     private colorsSwapped: boolean = false;
     private reasons: Map<GameOverReason, number> = new Map();
     private wins: number[] = [0, 0];
     private draws: number = 0;
     private tournamentRunning: boolean = false;
+    private tournamentDone: boolean = false;
     private eventQueue: Queue<TournamentUpdate> = new Queue();
 
     private clickCover: HTMLDivElement;
@@ -162,18 +162,15 @@ export class TournamentBoard {
             },
         });
 
-        this.gameCount = games;
         this.resultEngine1Span.innerText = engine1;
         this.resultEngine2Span.innerText = engine2;
 
         this.tournamentRunning = true;
+        this.tournamentDone = false;
         setTimeout(async () => await this.pollEventQueue(), 400);
 
         await api.startTournament(
-            (event: Object) => { 
-                if (this.tournamentRunning)
-                    this.eventQueue.push(event as TournamentUpdate) ;
-            },
+            (event: Object) => this.eventQueue.push(event as TournamentUpdate),
             games,
             engine1,
             engine2,
@@ -193,12 +190,10 @@ export class TournamentBoard {
         if (!queueEmpty) await this.handleEvent(this.eventQueue.pop()!);
 
         // Only continue polling if the tournament is not finished
-        if (this.tournamentRunning) {
+        if (!this.tournamentDone) {
             // If we are waiting for an event then poll again fast. If churning through then throttle it
-            const timeoutMs: number = queueEmpty ? 50 : 400;
+            const timeoutMs: number = (queueEmpty || !this.tournamentRunning) ? 50 : 400;
             setTimeout(async () => await this.pollEventQueue(), timeoutMs);
-        } else {
-            
         }
     }
 
@@ -209,7 +204,6 @@ export class TournamentBoard {
                 const wasSwapped: boolean = this.colorsSwapped;
                 this.colorsSwapped = update.swapped!;
                 this.controller = new BoardController(START_FEN);
-                if (this.renderer.isFlipped()) this.renderer.flipBoard();
                 this.renderer.clearHidden();
                 this.renderer.clearHighlighted();
                 this.renderer.clearSelected();
@@ -217,7 +211,7 @@ export class TournamentBoard {
                 this.renderer.drawPieces(this.controller.getState());
 
                 // Swap the player labels if the sides changes at halftime
-                if (this.colorsSwapped && !wasSwapped) {
+                if (this.colorsSwapped !== wasSwapped) {
                     let tmp: TimerDisplay = this.whiteTimer!.getDisplay();
                     this.whiteTimer!.setDisplay(this.blackTimer!.getDisplay());
                     this.blackTimer!.setDisplay(tmp);
@@ -246,6 +240,10 @@ export class TournamentBoard {
                 await new Promise<void>((res, _rej) => setTimeout(() => res(), 400));
                 break;
             case "TournamentEvent.MOVE":
+                // Ignore move events if we terminated the tournament
+                if (!this.tournamentRunning)
+                    break;
+
                 const move: Move = Move.fromLan(this.controller.getState(), update.move!);
                 this.controller.makeMove(move);
                 this.renderer.setHidden([move.from, move.to]);
@@ -273,10 +271,12 @@ export class TournamentBoard {
                 }
                 break;
             case "TournamentEvent.ERROR":
+                // TODO Some handling?
                 console.error("Some error with tournament stream");
                 break;
             case "TournamentEvent.TOURNAMENT_END":
                 this.tournamentRunning = false;
+                this.tournamentDone = true;
                 await this.showTournamentOverMenu();
                 this.reset();
                 break;
@@ -287,7 +287,6 @@ export class TournamentBoard {
         if (!this.setupForm || !this.setupMenu)
             throw new Error("Setup form or setup menu are not assigned");
 
-        this.tournamentRunning = false;
         this.eventQueue = new Queue();
         this.controller = new BoardController(START_FEN);
         if (this.renderer.isFlipped()) this.renderer.flipBoard();
@@ -345,10 +344,8 @@ export class TournamentBoard {
     }
 
     private async stopTournament() {
-        this.tournamentRunning = false; // Stop polling for new moves immediately
-        await api.stopTournament();
-        await this.showTournamentOverMenu();
-        this.reset();
+        this.tournamentRunning = false;
+        api.stopTournament();
     }
 
     private async showTournamentOverMenu(): Promise<void> {
@@ -428,8 +425,11 @@ export class TournamentBoard {
         const width: number = this.resultsCanvas.width;
         const height: number = this.resultsCanvas.height;
 
-        const winWidth: number = (this.wins[0]! / this.gameCount) * width;
-        const lossWidth: number = (this.wins[1]! / this.gameCount) * width;
+        // Not necessarily completed all games in tournament
+        const gameCount: number = this.wins[0]! + this.wins[1]! + this.draws;
+
+        const winWidth: number = (this.wins[0]! / gameCount) * width;
+        const lossWidth: number = (this.wins[1]! / gameCount) * width;
         const drawWidth: number = width - (winWidth + lossWidth);
 
         ctx.fillStyle = this.winHex;
