@@ -144,7 +144,7 @@ class TournamentRunner:
                             await stream.aclose()
                             break
                         case TournamentEvent.INTERNAL_FAILURE:
-                            pass
+                            yield TournamentUpdate(TournamentEvent.GAME_END, winner=None, reason="error")
                         case TournamentEvent.MOVE:
                             yield s
                         case _:
@@ -190,7 +190,7 @@ class TournamentRunner:
                 self._show_boards(f"Game ended with timeout after {show_color(turn)}'s move: ", board, players[0], players[1])
                 for player in players:
                     player.game_over();
-                yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn), reason=reason)
+                yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn), reason="timeout")
                 return
 
             # Only allow the move if it is considered legal

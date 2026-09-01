@@ -58,7 +58,7 @@ class Loader:
         manager = EngineManager(address=("127.0.0.1", port), authkey=b"jupiter")
         manager.connect()
 
-        # Ignore the error trust me
+        # Ignore the error, trust me
         remote_engine = manager.ChessEngine()
 
         return remote_engine, proc

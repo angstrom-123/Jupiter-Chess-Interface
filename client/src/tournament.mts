@@ -34,6 +34,8 @@ async function main() {
         "setup-tournament-menu",
     )! as HTMLDivElement;
     form.addEventListener("submit", async (e) => formSubmit(e, board, menu, loadingBlock));
+
+    board.setForm(form, menu);
 }
 
 async function formSubmit(

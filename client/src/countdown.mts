@@ -114,24 +114,28 @@ export class CountdownTimer {
         var rhs: string;
 
         if (countSeconds <= 60) {
-            const seconds: number = Math.floor(countSeconds);
-            const millis: number = parseFloat((countSeconds - seconds).toFixed(2)) * 100;
+            var seconds: number = Math.floor(countSeconds);
+            var millis: number = parseFloat((countSeconds - seconds).toFixed(2)) * 100;
+
+            // Make sure that it is formatted correctly if the time difference is very small
+            if (millis >= 100) {
+                seconds += 1;
+                millis -= 100;
+            }
 
             lhs = seconds.toString();
             rhs = millis.toFixed(0);
-            if (rhs.length === 1) rhs += "0";
-            else if (rhs.length > 2) rhs = rhs.substring(0, 2);
-            if (lhs.length === 1) lhs = "0" + lhs;
         } else {
             const minutes: number = Math.floor(countSeconds / 60);
             const seconds: number = Math.floor(countSeconds - minutes * 60);
 
             lhs = minutes.toString();
             rhs = seconds.toString();
-            if (rhs.length === 1) rhs = "0" + rhs;
-            else if (rhs.length > 2) rhs = rhs.substring(0, 2);
-            if (lhs.length === 1) lhs = "0" + lhs;
         }
+
+        if (rhs.length === 1) rhs = "0" + rhs;
+        else if (rhs.length > 2) rhs = rhs.substring(0, 2);
+        if (lhs.length === 1) lhs = "0" + lhs;
 
         return `${lhs}:${rhs}`;
     }

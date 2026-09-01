@@ -11,8 +11,9 @@ from pydantic import BaseModel, ConfigDict
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import FileResponse, StreamingResponse
 
+from src.engine_wrapper import EngineWrapper
 from src.board import GameOverReason
-from framework.base_engine import BaseEngine, TimeControl
+from framework.base_engine import TimeControl
 from src.loader import Loader
 from src.board_state import Color
 from src.tournament import TournamentEvent, TournamentRunner, TournamentStream
@@ -26,10 +27,12 @@ class State(BaseModel):
     
     turn: Color = Color.WHITE
 
-    white_engine: BaseEngine | None = None
+    # white_engine: BaseEngine | None = None
+    white_engine: EngineWrapper | None = None
     white_engine_process: subprocess.Popen[bytes] | None = None
 
-    black_engine: BaseEngine | None = None
+    # black_engine: BaseEngine | None = None
+    black_engine: EngineWrapper | None = None
     black_engine_process: subprocess.Popen[bytes] | None = None
 
     tournament_runner: TournamentRunner | None = None
@@ -108,7 +111,8 @@ async def game_start(request: Request):
         if info.white_player not in engines:
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
-        state.white_engine, state.white_engine_process = loader.launch_engine(engines[info.white_player])
+        white_engine, state.white_engine_process = loader.launch_engine(engines[info.white_player])
+        state.white_engine = EngineWrapper(white_engine)
         state.white_engine.init(tc, info.fen)
 
     if info.black_player != "Local":
@@ -116,7 +120,8 @@ async def game_start(request: Request):
         if info.black_player not in engines:
             return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
-        state.black_engine, state.black_engine_process = loader.launch_engine(engines[info.black_player])
+        black_engine, state.black_engine_process = loader.launch_engine(engines[info.black_player])
+        state.black_engine = EngineWrapper(black_engine)
         state.black_engine.init(tc, info.fen)
 
     state.turn = Color.WHITE;
@@ -198,10 +203,18 @@ async def start_tournament(request: Request) -> StreamingResponse:
             state.tournament_runner = TournamentRunner(loader, engines[info.engine_1], engines[info.engine_2], tc, info.game_count)
             stream: TournamentStream = state.tournament_runner.run()
             async for s in stream:
+                # Stop the tournament mid run
                 if state.tournament_runner.is_interrupted():
+                    # Cleanly terminate the last game with an interrupt
                     data = TournamentUpdateModel(event=str(TournamentEvent.GAME_END), winner=None, reason="interrupt")
                     sse_frame = f"event: {str(data.event)}\ndata: {data.model_dump_json()}\n\n"
                     yield sse_frame.encode("utf-8")
+
+                    # Yield a tournament end event before closing off the stream
+                    data = TournamentUpdateModel(event=str(TournamentEvent.TOURNAMENT_END))
+                    sse_frame = f"event: {str(data.event)}\ndata: {data.model_dump_json()}\n\n"
+                    yield sse_frame.encode("utf-8")
+
                     await stream.aclose();
 
                 match s.event:

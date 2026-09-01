@@ -132,7 +132,6 @@ export class BoardRenderer {
                 const height: number = r === 7 ? this.boardCanvas.height - y : squareSize;
 
                 this.boardCtx.fillStyle = isLightSquare ? lightSquareCol : darkSquareCol;
-
                 this.boardCtx.fillRect(x, y, width, height);
 
                 // Letter

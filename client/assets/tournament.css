@@ -1,9 +1,11 @@
 :root {
+    --lightest-gray: #6e6e6e;
     --light-gray: #454545;
     --mid-gray: #353535;
     --dark-gray: #2a2a2a;
     --white: #fbfbf3;
     --accent: #17b696;
+    --red: #e84969;
 }
 
 html, body {
@@ -438,7 +440,6 @@ select {
 
 .promotion-container {
     display: none;
-    position: absolute;
     top: 0px;
     left: 0px;
     height: 100%;
@@ -449,3 +450,130 @@ select {
     z-index: 3;
 }
 
+.tournament-over-menu {
+    position: relative;
+    width: 60%;
+    height: fit-content;
+    top: 50%;
+    left: 50%;
+    box-sizing: border-box;
+    transform: translate(-50%, -50%);
+    border-radius: 5px;
+    background-color: var(--mid-gray);
+    padding: 30px;
+    z-index: 3;
+}
+
+.tournament-over-menu p {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24pt;
+    font-weight: bold;
+}
+
+.canvas-container {
+    position: relative;
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+}
+
+.names-container {
+    display: flex;
+    justify-content: space-between;
+    padding: 0px;
+    margin: 0px;
+}
+
+.names-container span {
+    font-size: 14pt;
+    font-weight: normal;
+    padding: 15px 0px 15px 0px;
+    margin: 0px;
+}
+
+.score-canvas {
+    background-color: var(--mid-gray);
+    width: 100%;
+    height: 20px;
+    border-radius: 10px;
+}
+
+.breakdown-container {
+    padding: 20px 20% 20px 20%;
+}
+
+.breakdown-item {
+    height: 35px;
+    display: flex;
+    align-items: center;
+}
+
+.breakdown-item p {
+    display: flex;
+    font-size: 14pt;
+    padding: 0px;
+    width: 50%;
+    justify-content: left;
+    font-weight: normal;
+}
+
+.breakdown-item span {
+    display: flex;
+    font-size: 14pt;
+    padding: 0px;
+    width: 50%;
+    justify-content: right;
+    font-weight: normal;
+}
+
+.green-circle {
+    background-color: var(--accent);
+    height: 40%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+}
+
+.gray-circle {
+    background-color: var(--lightest-gray);
+    height: 40%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+}
+
+.red-circle {
+    background-color: var(--red);
+    height: 40%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+}
+
+.button-container {
+    height: 84px;
+    width: 100%;
+    box-sizing: border-box;
+    display: grid;
+    align-items: center;
+    padding: 10px;
+    justify-content: space-between;
+    background-color: var(--dark-gray);
+    border-radius: 5px;
+    grid-template-columns: auto auto;
+}
+
+.tournament-over-menu div button {
+    height: 64px;
+    aspect-ratio: 1;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    font-size: 22pt;
+    font-weight: bold;
+}
+
+.tournament-over-menu div button img {
+    filter: invert(1);
+}

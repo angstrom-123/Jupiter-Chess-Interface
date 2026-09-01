@@ -29,7 +29,7 @@
                     </div>
                     <div class="middle-card">
                         <button title="Flip Board" id="flip-board"><img src="assets/icons/repeat.png" alt="Flip board" style="transform: rotate(90deg); width: 75%;"></button>
-                        <button title="Resign" id="resign"><span id="confirm-resign"></span><img id="resign-icon" src="assets/icons/white-flag.png" alt="Resign" style="width: 80%;"></button>
+                        <button title="End Tournament" id="resign"><span id="confirm-resign"></span><img id="resign-icon" src="assets/icons/white-flag.png" alt="End Tournament" style="width: 80%;"></button>
                         <button title="Copy FEN" id="fen"><img src="assets/icons/copy.png" alt="Copy FEN" style="width: 75%;"></button>
                     </div>
                     <div id="friendly-card" class="card">
@@ -118,7 +118,7 @@
                                 </div>
                             </div>
                         </div>
-                        <input type="submit" value="Start Game">
+                        <input type="submit" value="Start Tournament">
                     </form>
                 </div>
                 <div id="loading-menu" class="loading-menu">
@@ -133,6 +133,64 @@
                         <div>
                             <span id="fen-span"></span>
                             <button title="Copy to Clipboard" id="copy-fen"><img src="assets/icons/copy.png" alt="Copy" style="width: 80%;"></button>
+                        </div>
+                    </div>
+                </div>
+                <div id="tournament-over-menu" class="promotion-container">
+                    <div class="tournament-over-menu">
+                        <p>Tournament Over</p>
+                        <div class="canvas-container">
+                            <div class="names-container">
+                                <span id="engine-1-name">[engine 1]</span>
+                                <span id="engine-2-name">[engine 2]</span>
+                            </div>
+                            <canvas id="score-canvas" class="score-canvas"></canvas>
+                            <div class="breakdown-container">
+                                <div class="breakdown-item">
+                                    <div class="green-circle"></div>
+                                    <p>Checkmate</p>
+                                    <span id="checkmate-reason">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="green-circle"></div>
+                                    <p>Timeout</p>
+                                    <span id="timeout-reason">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="gray-circle"></div>
+                                    <p>Stalemate</p>
+                                    <span id="stalemate-reason">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="gray-circle"></div>
+                                    <p>Material</p>
+                                    <span id="material-reason">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="gray-circle"></div>
+                                    <p>Repetition</p>
+                                    <span id="repetition-reason">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="gray-circle"></div>
+                                    <p>50 Move Rule</p>
+                                    <span id="fifty-reason">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="gray-circle"></div>
+                                    <p>Interrupt</p>
+                                    <span id="interrupt-reason">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="red-circle"></div>
+                                    <p>Error</p>
+                                    <span id="error-reason">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="button-container">
+                            <button title="Download Results" id="download-results"><img src="assets/icons/download.png" alt="Download" style="width: 80%;"></button>
+                            <button title="Ok" id="tournament-over-ok"><img src="assets/icons/check.png" alt="Ok" style="width: 90%;"></button>
                         </div>
                     </div>
                 </div>

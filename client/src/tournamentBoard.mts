@@ -20,7 +20,8 @@ type GameOverReason =
     | "material"
     | "repetition"
     | "fifty move rule"
-    | "interrupt";
+    | "interrupt"
+    | "error";
 interface TournamentUpdate {
     event: TournamentEvent;
     white_ms: number | null;
@@ -38,6 +39,14 @@ export class TournamentBoard {
     private whiteTimer: CountdownTimer | undefined;
     private blackTimer: CountdownTimer | undefined;
 
+    private setupForm: HTMLFormElement | undefined = undefined;
+    private setupMenu: HTMLDivElement | undefined = undefined;
+
+    private winHex: string = "#35bc29";
+    private drawHex: string = "#6e6e6e";
+    private lossHex: string = "#ff0602";
+
+    private gameCount: number = 0;
     private colorsSwapped: boolean = false;
     private reasons: Map<GameOverReason, number> = new Map();
     private wins: number[] = [0, 0];
@@ -57,6 +66,19 @@ export class TournamentBoard {
     private closeFenButton: HTMLButtonElement;
     private fenSpan: HTMLSpanElement;
 
+    private resignConfirmActive: boolean = false;
+    private resignButton: HTMLButtonElement;
+    private confirmResignSpan: HTMLSpanElement;
+    private resignIcon: HTMLImageElement;
+
+    private resultsCanvas: HTMLCanvasElement;
+    private tournamentOverMenu: HTMLDivElement;
+    private resultReasonSpans: Map<GameOverReason, HTMLSpanElement> = new Map();
+    private resultEngine1Span: HTMLSpanElement;
+    private resultEngine2Span: HTMLSpanElement;
+    private downloadResultsButton: HTMLButtonElement;
+    private tournamentOverOkButton: HTMLButtonElement;
+
     constructor(fen: string) {
         this.clickCover = document.getElementById("click-cover")! as HTMLDivElement;
         this.boardCanvas = document.getElementById("board-canvas")! as HTMLCanvasElement;
@@ -69,6 +91,11 @@ export class TournamentBoard {
         this.copyFenButton = document.getElementById("copy-fen")! as HTMLButtonElement;
         this.closeFenButton = document.getElementById("close-fen")! as HTMLButtonElement;
         this.fenSpan = document.getElementById("fen-span")! as HTMLSpanElement;
+
+        this.resignButton = document.getElementById("resign")! as HTMLButtonElement;
+        this.confirmResignSpan = document.getElementById("confirm-resign")! as HTMLSpanElement;
+        this.resignIcon = document.getElementById("resign-icon")! as HTMLImageElement;
+        this.resignButton.addEventListener("click", (_e) => this.stopTournamentPressed());
 
         this.controller = new BoardController(fen);
         this.renderer = new BoardRenderer(this.boardCanvas, this.spriteCanvas);
@@ -85,11 +112,37 @@ export class TournamentBoard {
             this.clickCover.style.display = "none";
             this.fenMenu.style.display = "none";
         });
+
+        this.resultReasonSpans.set("checkmate", document.getElementById("checkmate-reason")!);
+        this.resultReasonSpans.set("timeout", document.getElementById("timeout-reason")!);
+        this.resultReasonSpans.set("stalemate", document.getElementById("stalemate-reason")!);
+        this.resultReasonSpans.set("repetition", document.getElementById("repetition-reason")!);
+        this.resultReasonSpans.set("material", document.getElementById("material-reason")!);
+        this.resultReasonSpans.set("fifty move rule", document.getElementById("fifty-reason")!);
+        this.resultReasonSpans.set("interrupt", document.getElementById("interrupt-reason")!);
+        this.resultReasonSpans.set("error", document.getElementById("error-reason")!);
+        this.resultEngine1Span = document.getElementById("engine-1-name")! as HTMLSpanElement;
+        this.resultEngine2Span = document.getElementById("engine-2-name")! as HTMLSpanElement;
+        this.resultsCanvas = document.getElementById("score-canvas")! as HTMLCanvasElement;
+        this.downloadResultsButton = document.getElementById(
+            "download-results",
+        )! as HTMLButtonElement;
+        this.tournamentOverOkButton = document.getElementById(
+            "tournament-over-ok",
+        )! as HTMLButtonElement;
+        this.tournamentOverMenu = document.getElementById(
+            "tournament-over-menu",
+        )! as HTMLDivElement;
+    }
+
+    public setForm(form: HTMLFormElement, menu: HTMLDivElement) {
+        this.setupForm = form;
+        this.setupMenu = menu;
     }
 
     public async start(games: number, engine1: string, engine2: string, tc: TimeControlInfo) {
         this.whiteTimer = new CountdownTimer({
-            title: engine2,
+            title: engine1,
             from: tc.time,
             increment: tc.increment,
             display: {
@@ -99,7 +152,7 @@ export class TournamentBoard {
             },
         });
         this.blackTimer = new CountdownTimer({
-            title: engine1,
+            title: engine2,
             from: tc.time,
             increment: tc.increment,
             display: {
@@ -109,12 +162,18 @@ export class TournamentBoard {
             },
         });
 
+        this.gameCount = games;
+        this.resultEngine1Span.innerText = engine1;
+        this.resultEngine2Span.innerText = engine2;
+
         this.tournamentRunning = true;
         setTimeout(async () => await this.pollEventQueue(), 400);
 
         await api.startTournament(
-            // (event: Object) => this.handleEvent(event),
-            (event: Object) => this.eventQueue.push(event as TournamentUpdate),
+            (event: Object) => { 
+                if (this.tournamentRunning)
+                    this.eventQueue.push(event as TournamentUpdate) ;
+            },
             games,
             engine1,
             engine2,
@@ -138,6 +197,8 @@ export class TournamentBoard {
             // If we are waiting for an event then poll again fast. If churning through then throttle it
             const timeoutMs: number = queueEmpty ? 50 : 400;
             setTimeout(async () => await this.pollEventQueue(), timeoutMs);
+        } else {
+            
         }
     }
 
@@ -145,10 +206,7 @@ export class TournamentBoard {
         const update: TournamentUpdate = event as TournamentUpdate;
         switch (update.event) {
             case "TournamentEvent.GAME_START":
-                console.log("w:", this.wins);
-                console.log("d:", this.draws);
-                console.log("r:", this.reasons);
-
+                const wasSwapped: boolean = this.colorsSwapped;
                 this.colorsSwapped = update.swapped!;
                 this.controller = new BoardController(START_FEN);
                 if (this.renderer.isFlipped()) this.renderer.flipBoard();
@@ -157,8 +215,24 @@ export class TournamentBoard {
                 this.renderer.clearSelected();
                 this.renderer.drawBoard();
                 this.renderer.drawPieces(this.controller.getState());
+
+                // Swap the player labels if the sides changes at halftime
+                if (this.colorsSwapped && !wasSwapped) {
+                    let tmp: TimerDisplay = this.whiteTimer!.getDisplay();
+                    this.whiteTimer!.setDisplay(this.blackTimer!.getDisplay());
+                    this.blackTimer!.setDisplay(tmp);
+
+                    if (this.controller.getState().turn === Color.WHITE) {
+                        this.whiteTimer!.showBorder();
+                    } else {
+                        this.blackTimer!.showBorder();
+                    }
+                }
                 break;
             case "TournamentEvent.GAME_END":
+                const count: number | undefined = this.reasons.get(update.reason!);
+                this.reasons.set(update.reason!, count ? count + 1 : 1);
+
                 if (update.winner === null) {
                     this.draws++;
                     break;
@@ -168,10 +242,7 @@ export class TournamentBoard {
                     : update.winner;
                 this.wins[winner]!++;
 
-                const count: number | undefined = this.reasons.get(update.reason!);
-                this.reasons.set(update.reason!, count ? count + 1 : 1);
-
-                // Slight delay on game over to let the observer see what happened
+                // Slight delay on game over so you can see what happened
                 await new Promise<void>((res, _rej) => setTimeout(() => res(), 400));
                 break;
             case "TournamentEvent.MOVE":
@@ -206,8 +277,33 @@ export class TournamentBoard {
                 break;
             case "TournamentEvent.TOURNAMENT_END":
                 this.tournamentRunning = false;
+                await this.showTournamentOverMenu();
+                this.reset();
                 break;
         }
+    }
+
+    private reset() {
+        if (!this.setupForm || !this.setupMenu)
+            throw new Error("Setup form or setup menu are not assigned");
+
+        this.tournamentRunning = false;
+        this.eventQueue = new Queue();
+        this.controller = new BoardController(START_FEN);
+        if (this.renderer.isFlipped()) this.renderer.flipBoard();
+        this.renderer.clearHidden();
+        this.renderer.clearHighlighted();
+        this.renderer.clearSelected();
+        this.renderer.drawBoard();
+        this.renderer.drawPieces(this.controller.getState());
+        this.wins = [0, 0];
+        this.draws = 0;
+        this.colorsSwapped = false;
+        for (const key of this.reasons.keys()) 
+            this.reasons.set(key, 0);
+        this.whiteTimer!.hideBorder();
+        this.blackTimer!.hideBorder();
+        this.setupMenu.style.display = "inline";
     }
 
     private showFen() {
@@ -231,5 +327,118 @@ export class TournamentBoard {
         } else {
             this.blackTimer!.showBorder();
         }
+    }
+
+    private async stopTournamentPressed() {
+        if (this.resignConfirmActive) await this.stopTournament();
+
+        // Confirm
+        this.resignIcon.style.display = "none";
+        this.confirmResignSpan.innerText = "ok?";
+
+        this.resignConfirmActive = true;
+        setTimeout(() => {
+            this.resignIcon.style.display = "inline";
+            this.confirmResignSpan.innerText = "";
+            this.resignConfirmActive = false;
+        }, 2000);
+    }
+
+    private async stopTournament() {
+        this.tournamentRunning = false; // Stop polling for new moves immediately
+        await api.stopTournament();
+        await this.showTournamentOverMenu();
+        this.reset();
+    }
+
+    private async showTournamentOverMenu(): Promise<void> {
+        requestAnimationFrame(() => this.renderResultsBar());
+
+        this.clickCover.style.display = "inline";
+        this.tournamentOverMenu.style.display = "inline";
+
+        const checkmates: number | undefined = this.reasons.get("checkmate");
+        const timeouts: number | undefined = this.reasons.get("timeout");
+        const stalemates: number | undefined = this.reasons.get("stalemate");
+        const repetitions: number | undefined = this.reasons.get("repetition");
+        const materials: number | undefined = this.reasons.get("material");
+        const fifties: number | undefined = this.reasons.get("fifty move rule");
+        const interrupts: number | undefined = this.reasons.get("interrupt");
+        const errors: number | undefined = this.reasons.get("error");
+
+        this.resultReasonSpans.get("checkmate")!.innerText = `${checkmates ? checkmates : "-"}`;
+        this.resultReasonSpans.get("timeout")!.innerText = `${timeouts ? timeouts : "-"}`;
+        this.resultReasonSpans.get("stalemate")!.innerText = `${stalemates ? stalemates : "-"}`;
+        this.resultReasonSpans.get("repetition")!.innerText = `${repetitions ? repetitions : "-"}`;
+        this.resultReasonSpans.get("material")!.innerText = `${materials ? materials : "-"}`;
+        this.resultReasonSpans.get("fifty move rule")!.innerText = `${fifties ? fifties : "-"}`;
+        this.resultReasonSpans.get("interrupt")!.innerText = `${interrupts ? interrupts : "-"}`;
+        this.resultReasonSpans.get("error")!.innerText = `${errors ? errors : "-"}`;
+
+        const controller: AbortController = new AbortController();
+        const { signal } = controller;
+
+        return new Promise<void>((res, _rej) => {
+            this.tournamentOverOkButton.addEventListener(
+                "click",
+                () => {
+                    this.tournamentOverMenu.style.display = "none";
+                    this.clickCover.style.display = "none";
+                    controller.abort();
+                    res();
+                },
+                { signal },
+            );
+            this.downloadResultsButton.addEventListener(
+                "click",
+                () => {
+                    this.downloadResults();
+                    this.tournamentOverMenu.style.display = "none";
+                    this.clickCover.style.display = "none";
+                    controller.abort();
+                    res();
+                },
+                { signal },
+            );
+        });
+    }
+
+    private downloadResults() {
+        // TODO
+        // const game: GameDownload = {
+        //     startFen: this.controller.getStartingFen(),
+        //     moves: this.controller.getHistory().map((x) => x.toLan()),
+        //     whitePlayer: this.gameInfo!.whitePlayer,
+        //     blackPlayer: this.gameInfo!.blackPlayer,
+        // };
+        //
+        // const blob: Blob = new Blob([JSON.stringify(game)], { type: "application/json" });
+        // const url: string = URL.createObjectURL(blob);
+        //
+        // const link: HTMLAnchorElement = document.createElement("a");
+        // link.href = url;
+        // link.download = `${humanReadableId()}.jupiter.json`;
+        // link.click();
+        // URL.revokeObjectURL(url);
+    }
+
+    private renderResultsBar() {
+        const ctx: CanvasRenderingContext2D = this.resultsCanvas.getContext("2d")!;
+
+        const width: number = this.resultsCanvas.width;
+        const height: number = this.resultsCanvas.height;
+
+        const winWidth: number = (this.wins[0]! / this.gameCount) * width;
+        const lossWidth: number = (this.wins[1]! / this.gameCount) * width;
+        const drawWidth: number = width - (winWidth + lossWidth);
+
+        ctx.fillStyle = this.winHex;
+        ctx.fillRect(0, 0, winWidth, height);
+
+        ctx.fillStyle = this.drawHex;
+        ctx.fillRect(winWidth, 0, drawWidth, height);
+
+        ctx.fillStyle = this.lossHex;
+        ctx.fillRect(winWidth + drawWidth, 0, lossWidth, height);
     }
 }

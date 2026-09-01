@@ -4,7 +4,7 @@ from src.board_state import BoardCoord, BoardState, CastlingRights, Color, Piece
 from src.zobrist import ZobristTable
 
 SpecialMove = Literal["castle short", "castle long", "en passant", "double push"]
-GameOverReason = Literal["timeout", "checkmate", "stalemate", "material", "repetition", "fifty move rule", "interrupt"]
+GameOverReason = Literal["timeout", "checkmate", "stalemate", "material", "repetition", "fifty move rule", "interrupt", "error"]
 
 class Move():
     def __init__(
@@ -125,7 +125,8 @@ class MoveData:
         self.fifty_ctr: int = fifty_ctr
 
 class Board:
-    def __init__(self):
+    # TODO: Add support for fen parsing here
+    def __init__(self, fen: str | None = None):
         self._zobrist: ZobristTable = ZobristTable()
         self._state: BoardState = BoardState()
         self._attacks: list[list[bool]] = [[False] * 64] * 2
