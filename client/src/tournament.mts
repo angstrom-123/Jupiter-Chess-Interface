@@ -66,8 +66,7 @@ async function formSubmit(
     const blackPlayer: string = formData.get("black-player")! as string;
     const timeControl: TimeControl = formData.get("time-control")! as TimeControl;
 
-    // board.start(games, whitePlayer, blackPlayer, timeControlLookup.get(timeControl)!);
-    board.start(3, whitePlayer, blackPlayer, { time: 3, increment: 0 });
+    board.start(games, whitePlayer, blackPlayer, timeControlLookup.get(timeControl)!);
 
     loadingBlock.style.display = "none";
 }
