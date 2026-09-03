@@ -82,7 +82,7 @@
                                     <label for="5min">5 min</label>
                                 </div>
                                 <div>
-                                    <input type="radio" value="0:30+1" id="30sec" name="time-control">
+                                    <input type="radio" value="0:30+1" id="30sec+1" name="time-control">
                                     <label for="30sec+1">30s + 1</label>
                                 </div>
                                 <div>
@@ -96,6 +96,24 @@
                                 <div>
                                     <input type="radio" value="5+5" id="5min+5" name="time-control">
                                     <label for="5min+5">5 + 5</label>
+                                </div>
+                            </div>
+                            <div class="custom-time-control">
+                                <div>
+                                    <input type="radio" value="custom" id="custom" name="time-control">
+                                    <label for="custom">Custom</label>
+                                </div>
+                                <div>
+                                    <input type="number" min="0" placeholder="min (0)" id="minutes" name="custom-minutes">
+                                    <label for="minutes"></label>
+                                </div>
+                                <div>
+                                    <input type="number" min="0" placeholder="sec (30)" id="seconds" name="custom-seconds">
+                                    <label for="seconds"></label>
+                                </div>
+                                <div>
+                                    <input type="number" min="0" placeholder="inc (0)" id="increment" name="custom-increment">
+                                    <label for="increment"></label>
                                 </div>
                             </div>
                         </div>

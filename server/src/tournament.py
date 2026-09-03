@@ -119,6 +119,8 @@ class TournamentRunner:
         if self._count <= 0:
             raise ValueError("Tournament game count must be positive")
 
+        self._results = TournamentResults()
+
         print(f"Running tournament for {self._count} games")
         try:
             for i in range(self._count):
@@ -152,7 +154,13 @@ class TournamentRunner:
 
                 yield TournamentUpdate(TournamentEvent.GAME_END, winner=winner, reason=reason)
 
-                self._show_results(i)
+                print(f"[{i + 1}/{self._count}] Jupiter - {self._results.wins_1} - {self._results.draws} - {self._results.wins_2} - Jupiter")
+                reason_counts: dict[GameOverReason, int] = {}
+                for r in self._results.reasons:
+                    reason_counts[r] = reason_counts[r] + 1 if reason_counts.get(r) is not None else 1
+                for k in reason_counts.keys():
+                    print(f" - {k}: {reason_counts[k]}")
+                print(f" - error: {len(self._results.failures)}")
                 
             yield TournamentUpdate(TournamentEvent.TOURNAMENT_END);
         except Exception as e:
@@ -175,7 +183,7 @@ class TournamentRunner:
             # Check if game ended on previous move
             if (reason := board.is_game_over()) is not None:
                 self._results.reasons.append(reason)
-                self._show_boards(f"Game ended with {reason} on {show_color(turn)}'s turn: ", board, players[0], players[1])
+                print(f"Game ended with {reason} on {show_color(turn)}'s turn")
                 for player in players:
                     player.game_over();
                 yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn) if reason == "checkmate" else None, reason=reason)
@@ -187,7 +195,7 @@ class TournamentRunner:
             # Check for timeout (engine failed to even generate move)
             if lan is None:
                 self._results.reasons.append("timeout")
-                self._show_boards(f"Game ended with timeout after {show_color(turn)}'s move: ", board, players[0], players[1])
+                print(f"Game ended with timeout after {show_color(turn)}'s move")
                 for player in players:
                     player.game_over();
                 yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn), reason="timeout")
@@ -195,7 +203,12 @@ class TournamentRunner:
 
             # Only allow the move if it is considered legal
             if not board.is_legal_move(move := Move.from_lan(board.get_state(), lan)):
-                self._show_boards(f"Illegal move {lan}", board, players[0], players[1])
+                print(f"Illegal move {lan}")
+                print(repr(board))
+                print("\nWhite engine state:")
+                print(players[0].show())
+                print("\nBlack engine state")
+                print(players[1].show())
                 self._results.failures.append(board.get_history())
                 yield TournamentUpdate(TournamentEvent.INTERNAL_FAILURE)
                 return
@@ -209,7 +222,7 @@ class TournamentRunner:
             # Check for timeout (clock)
             if timer.ms_left(turn) <= 0:
                 self._results.reasons.append("timeout")
-                self._show_boards(f"Game ended with timeout after {show_color(turn)}'s move: ", board, players[0], players[1])
+                print(f"Game ended with timeout after {show_color(turn)}'s move")
                 for player in players:
                     player.game_over();
                 yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn), reason="timeout")
@@ -221,20 +234,3 @@ class TournamentRunner:
                 black_ms=timer.ms_left(Color.BLACK), 
                 move=lan
             )
-
-    def _show_boards(self, msg: str, board: Board, white: BaseEngine, black: BaseEngine):
-        print(msg)
-        print(repr(board))
-        print("\nWhite engine state:")
-        print(white.show())
-        print("\nBlack engine state")
-        print(black.show())
-
-    def _show_results(self, game_number: int):
-        print(f"[{game_number + 1}/{self._count}] Jupiter - {self._results.wins_1} - {self._results.draws} - {self._results.wins_2} - Jupiter")
-        reason_counts: dict[GameOverReason, int] = {}
-        for r in self._results.reasons:
-            reason_counts[r] = reason_counts[r] + 1 if reason_counts.get(r) is not None else 1
-        for k in reason_counts.keys():
-            print(f" - {k}: {reason_counts[k]}")
-        print(f" - error: {len(self._results.failures)}")

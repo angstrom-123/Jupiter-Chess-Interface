@@ -7,6 +7,33 @@ import { START_FEN } from "./fenParser.mjs";
 import { Move } from "./move.mjs";
 import { Queue } from "./queue.mjs";
 
+export const TournamentTimeControls = [
+    "0:10",
+    "0:20",
+    "0:30",
+    "1",
+    "0:10+1",
+    "0:20+1",
+    "0:30+1",
+    "1+1",
+    "custom",
+] as const;
+export type TournamentTimeControl = (typeof TournamentTimeControls)[number];
+export const tournamentTimeControlLookup: Map<TournamentTimeControl, TimeControlInfo> = new Map<
+    TournamentTimeControl,
+    TimeControlInfo
+>([
+    ["0:10", { time: 10, increment: 0 }],
+    ["0:20", { time: 20, increment: 0 }],
+    ["0:30", { time: 30, increment: 0 }],
+    ["1", { time: 60, increment: 0 }],
+    ["0:10+1", { time: 10, increment: 1 }],
+    ["0:20+1", { time: 20, increment: 1 }],
+    ["0:30+1", { time: 30, increment: 1 }],
+    ["1+1", { time: 60, increment: 1 }],
+    ["custom", { time: 30, increment: 0 }],
+]);
+
 type TournamentEvent =
     | "TournamentEvent.GAME_START"
     | "TournamentEvent.GAME_END"
@@ -192,7 +219,7 @@ export class TournamentBoard {
         // Only continue polling if the tournament is not finished
         if (!this.tournamentDone) {
             // If we are waiting for an event then poll again fast. If churning through then throttle it
-            const timeoutMs: number = (queueEmpty || !this.tournamentRunning) ? 50 : 400;
+            const timeoutMs: number = queueEmpty || !this.tournamentRunning ? 50 : 400;
             setTimeout(async () => await this.pollEventQueue(), timeoutMs);
         }
     }
@@ -240,9 +267,10 @@ export class TournamentBoard {
                 await new Promise<void>((res, _rej) => setTimeout(() => res(), 400));
                 break;
             case "TournamentEvent.MOVE":
+                console.log(`Received move: '${update.move!}'`);
+
                 // Ignore move events if we terminated the tournament
-                if (!this.tournamentRunning)
-                    break;
+                if (!this.tournamentRunning) break;
 
                 const move: Move = Move.fromLan(this.controller.getState(), update.move!);
                 this.controller.makeMove(move);
@@ -298,8 +326,7 @@ export class TournamentBoard {
         this.wins = [0, 0];
         this.draws = 0;
         this.colorsSwapped = false;
-        for (const key of this.reasons.keys()) 
-            this.reasons.set(key, 0);
+        for (const key of this.reasons.keys()) this.reasons.set(key, 0);
         this.whiteTimer!.hideBorder();
         this.blackTimer!.hideBorder();
         this.setupMenu.style.display = "inline";

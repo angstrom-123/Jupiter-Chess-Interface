@@ -15,7 +15,17 @@ import type { Square } from "./boardState.mjs";
 import { humanReadableId } from "./readableId.mjs";
 import { START_FEN } from "./fenParser.mjs";
 
-export const TimeControls = ["0:30", "1", "3", "5", "0:30+1", "1+1", "3+3", "5+5"] as const;
+export const TimeControls = [
+    "0:30",
+    "1",
+    "3",
+    "5",
+    "0:30+1",
+    "1+1",
+    "3+3",
+    "5+5",
+    "custom",
+] as const;
 export type TimeControl = (typeof TimeControls)[number];
 export interface TimeControlInfo {
     time: number;
@@ -33,6 +43,7 @@ export const timeControlLookup: Map<TimeControl, TimeControlInfo> = new Map<
     ["1+1", { time: 60, increment: 1 }],
     ["3+3", { time: 180, increment: 3 }],
     ["5+5", { time: 300, increment: 5 }],
+    ["custom", { time: 30, increment: 0 }],
 ]);
 
 export enum GameOverReason {
@@ -53,7 +64,7 @@ export interface PlayerInfo {
 export interface GameInfo {
     whitePlayer: PlayerInfo;
     blackPlayer: PlayerInfo;
-    timeControl: TimeControl;
+    timeControl: TimeControlInfo;
 }
 
 export interface GameDownload {
@@ -166,11 +177,10 @@ export class Board {
     public async init(gameInfo: GameInfo) {
         this.gameInfo = gameInfo;
 
-        const { time, increment } = timeControlLookup.get(this.gameInfo.timeControl)!;
         this.whiteTimer = new CountdownTimer({
             title: this.gameInfo.whitePlayer.name,
-            from: time,
-            increment: increment,
+            from: gameInfo.timeControl.time,
+            increment: gameInfo.timeControl.increment,
             display: {
                 title: document.getElementById("friendly-label")! as HTMLParagraphElement,
                 time: document.getElementById("friendly-timer")! as HTMLSpanElement,
@@ -180,8 +190,8 @@ export class Board {
         });
         this.blackTimer = new CountdownTimer({
             title: this.gameInfo.blackPlayer.name,
-            from: time,
-            increment: increment,
+            from: gameInfo.timeControl.time,
+            increment: gameInfo.timeControl.increment,
             display: {
                 title: document.getElementById("opponent-label")! as HTMLParagraphElement,
                 time: document.getElementById("opponent-timer")! as HTMLSpanElement,
@@ -195,7 +205,7 @@ export class Board {
         if (this.gameInfo.whitePlayer.isHuman) {
             this.awaitingGameStart = true;
         } else {
-            this.countdownTurn();
+            this.whiteTimer!.start();
             await this.engineMove();
         }
     }
@@ -359,7 +369,7 @@ export class Board {
     }
 
     private gameStart() {
-        this.countdownTurn();
+        this.whiteTimer!.start();
         this.awaitingGameStart = false;
     }
 

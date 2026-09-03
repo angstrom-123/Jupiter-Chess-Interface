@@ -64,6 +64,14 @@
                             <label>Time Control</label>
                             <div class="time-controls">
                                 <div>
+                                    <input type="radio" value="0:10" id="10sec" name="time-control">
+                                    <label for="10sec">10s</label>
+                                </div>
+                                <div>
+                                    <input type="radio" value="0:20" id="20sec" name="time-control">
+                                    <label for="20sec">20s</label>
+                                </div>
+                                <div>
                                     <input type="radio" value="0:30" id="30sec" name="time-control">
                                     <label for="30sec">30s</label>
                                 </div>
@@ -72,12 +80,12 @@
                                     <label for="1min">1 min</label>
                                 </div>
                                 <div>
-                                    <input type="radio" value="3" id="3min" name="time-control" checked="checked">
-                                    <label for="3min">3 min</label>
+                                    <input type="radio" value="0:10+1" id="10sec+1" name="time-control" checked="checked">
+                                    <label for="10sec+1">10s + 1</label>
                                 </div>
                                 <div>
-                                    <input type="radio" value="5" id="5min" name="time-control">
-                                    <label for="5min">5 min</label>
+                                    <input type="radio" value="0:20+1" id="20sec+1" name="time-control">
+                                    <label for="20sec+1">20s + 1</label>
                                 </div>
                                 <div>
                                     <input type="radio" value="0:30+1" id="30sec+1" name="time-control">
@@ -87,13 +95,23 @@
                                     <input type="radio" value="1+1" id="1min+1" name="time-control">
                                     <label for="1min+1">1 + 1</label>
                                 </div>
+                            </div>
+                            <div class="custom-time-control">
                                 <div>
-                                    <input type="radio" value="3+3" id="3min+3" name="time-control">
-                                    <label for="3min+3">3 + 3</label>
+                                    <input type="radio" value="custom" id="custom" name="time-control">
+                                    <label for="custom">Custom</label>
                                 </div>
                                 <div>
-                                    <input type="radio" value="5+5" id="5min+5" name="time-control">
-                                    <label for="5min+5">5 + 5</label>
+                                    <input type="number" min="0" placeholder="min (0)" id="minutes" name="custom-minutes">
+                                    <label for="minutes"></label>
+                                </div>
+                                <div>
+                                    <input type="number" min="0" placeholder="sec (30)" id="seconds" name="custom-seconds">
+                                    <label for="seconds"></label>
+                                </div>
+                                <div>
+                                    <input type="number" min="0" placeholder="inc (0)" id="increment" name="custom-increment">
+                                    <label for="increment"></label>
                                 </div>
                             </div>
                         </div>
@@ -101,20 +119,20 @@
                             <label>Game Count</label>
                             <div class="time-controls">
                                 <div>
-                                    <input type="radio" value="50" id="50" name="game-count">
+                                    <input type="radio" value="20" id="20" name="game-count">
+                                    <label for="20">20</label>
+                                </div>
+                                <div>
+                                    <input type="radio" value="50" id="50" name="game-count" checked="checked">
                                     <label for="50">50</label>
                                 </div>
                                 <div>
-                                    <input type="radio" value="100" id="100" name="game-count" checked="checked">
+                                    <input type="radio" value="100" id="100" name="game-count">
                                     <label for="100">100</label>
                                 </div>
                                 <div>
                                     <input type="radio" value="200" id="200" name="game-count">
                                     <label for="200">200</label>
-                                </div>
-                                <div>
-                                    <input type="radio" value="500" id="500" name="game-count">
-                                    <label for="500">500</label>
                                 </div>
                             </div>
                         </div>
