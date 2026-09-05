@@ -24,6 +24,7 @@ git checkout -b your-engine-branch
 Add your personal engine repository as a submodule under `engines/`
 
 ```bash
+cd engines
 git submodule add https://github.com/your-username/your-engine engines/YourEngineName
 ```
 
