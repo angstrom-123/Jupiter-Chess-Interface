@@ -105,6 +105,7 @@ export class TournamentBoard {
     private resultEngine2Span: HTMLSpanElement;
     private downloadResultsButton: HTMLButtonElement;
     private tournamentOverOkButton: HTMLButtonElement;
+    private tournamentOverLoadingMenu: HTMLDivElement;
 
     constructor(fen: string) {
         this.clickCover = document.getElementById("click-cover")! as HTMLDivElement;
@@ -159,6 +160,9 @@ export class TournamentBoard {
         )! as HTMLButtonElement;
         this.tournamentOverMenu = document.getElementById(
             "tournament-over-menu",
+        )! as HTMLDivElement;
+        this.tournamentOverLoadingMenu = document.getElementById(
+            "tournament-loading-menu",
         )! as HTMLDivElement;
     }
 
@@ -218,8 +222,10 @@ export class TournamentBoard {
 
         // Only continue polling if the tournament is not finished
         if (!this.tournamentDone) {
-            // If we are waiting for an event then poll again fast. If churning through then throttle it
-            const timeoutMs: number = queueEmpty || !this.tournamentRunning ? 50 : 400;
+            var timeoutMs: number = 400; // Nice slow rate to see animations
+            if (queueEmpty)
+                timeoutMs = 50; // Wait a bit before polling the queue again
+            else if (!this.tournamentRunning) timeoutMs = 1; // Run through the remaining events as fast as possible
             setTimeout(async () => await this.pollEventQueue(), timeoutMs);
         }
     }
@@ -371,6 +377,7 @@ export class TournamentBoard {
     }
 
     private async stopTournament() {
+        this.tournamentOverLoadingMenu.style.display = "flex";
         this.tournamentRunning = false;
         api.stopTournament();
     }
@@ -379,6 +386,7 @@ export class TournamentBoard {
         requestAnimationFrame(() => this.renderResultsBar());
 
         this.clickCover.style.display = "inline";
+        this.tournamentOverLoadingMenu.style.display = "none";
         this.tournamentOverMenu.style.display = "inline";
 
         const checkmates: number | undefined = this.reasons.get("checkmate");

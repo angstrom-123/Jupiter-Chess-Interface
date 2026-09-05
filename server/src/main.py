@@ -244,10 +244,8 @@ async def start_tournament(request: Request) -> StreamingResponse:
                         yield sse_frame.encode("utf-8")
                         await asyncio.sleep(0) # Flush buffer
                     case _:
-                        data = TournamentUpdateModel(event=str(TournamentEvent.ERROR))
-                        sse_frame = f"event: {str(TournamentEvent.ERROR)}\ndata: {data.model_dump_json()}\n\n"
-                        yield sse_frame.encode("utf-8")
-                        break
+                        print("Bad event received from tournament event stream:")
+                        print(s)
             await stream.aclose()
 
     return StreamingResponse(

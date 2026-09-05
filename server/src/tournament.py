@@ -56,6 +56,13 @@ class TournamentResults:
     failures: list[list[Move]] = []
     reasons: list[GameOverReason] = []
 
+    def __init__(self):
+        self.wins_1 = 0 
+        self.wins_2 = 0 
+        self.draws = 0 
+        self.failures = [] 
+        self.reasons = []
+
 class TournamentTimer:
     def __init__(self, tc: TimeControl):
         self._white_ms: int = tc.seconds * 1000
@@ -81,11 +88,14 @@ class TournamentTimer:
         self._is_white = not self._is_white
 
 class TournamentRunner:
+    _engine_1_path: Path
     _engine_1: BaseEngine
     _process_1: subprocess.Popen[bytes]
+    _engine_2_path: Path
     _engine_2: BaseEngine
     _process_2: subprocess.Popen[bytes]
     _interrupted: bool = False
+    _loader: Loader
 
     def __init__(
         self,
@@ -95,11 +105,14 @@ class TournamentRunner:
         tc: TimeControl,
         count: int
     ):
+        self._engine_1_path = white_engine_path
+        self._engine_2_path = black_engine_path
         self._engine_1, self._process_1 = loader.launch_engine(white_engine_path)
         self._engine_2, self._process_2 = loader.launch_engine(black_engine_path)
         self._tc: TimeControl = tc 
         self._count: int = count
         self._results: TournamentResults = TournamentResults()
+        self._loader = loader
 
     def interrupt(self):
         self._interrupted = True 
@@ -122,8 +135,8 @@ class TournamentRunner:
         self._results = TournamentResults()
 
         print(f"Running tournament for {self._count} games")
-        try:
-            for i in range(self._count):
+        for i in range(self._count):
+            try:
                 swap: bool = i >= self._count // 2
 
                 yield TournamentUpdate(TournamentEvent.GAME_START, swapped=swap)
@@ -162,10 +175,21 @@ class TournamentRunner:
                     print(f" - {k}: {reason_counts[k]}")
                 print(f" - error: {len(self._results.failures)}")
                 
-            yield TournamentUpdate(TournamentEvent.TOURNAMENT_END);
-        except Exception as e:
-            print("Tournament interrupted because:")
-            print(e)
+            except Exception as e:
+                print(f"Tournament exception caught: '{e}'")
+
+                # Refresh the processes to flush any corrupted state
+                self._process_1.terminate()
+                self._process_2.terminate()
+                self._engine_1, self._process_1 = self._loader.launch_engine(self._engine_1_path)
+                self._engine_2, self._process_2 = self._loader.launch_engine(self._engine_2_path)
+
+                self._results.failures.append([]) # NOTE: History not saved for this type of error currently
+                yield TournamentUpdate(TournamentEvent.GAME_END, winner=None, reason="error")
+
+        self._process_1.terminate()
+        self._process_2.terminate()
+        yield TournamentUpdate(TournamentEvent.TOURNAMENT_END);
 
     async def _play_game(self, swapped: bool) -> TournamentStream:
         self._engine_1.init(self._tc)
