@@ -84,7 +84,7 @@ These steps show you how to set up your engine to interact with Jupiter, details
 
 #### Step 2 - Implement The API
 
-Currently there are three required methods that you must implement in your engine class. It is reccommended to keep additional engine implementation separate to keep this interface clean.
+Currently there are three required methods that you must implement in your engine class. It is recommended to keep additional engine implementation separate to keep this interface clean.
 
 The methods that you must implement are:
 1. init: `init(self, tc: TimeControl, fen: str | None = None) -> None`
@@ -98,6 +98,14 @@ The methods that you must implement are:
   - Apply a move to the engine's internal state
   - This move will arrive in the same UCI LAN as described above
   - The move will be legal, but may not be the one that your engine generated with `go`
+
+Additional methods that you might implement for testing and debugging are:
+1. show: `show(self) -> str`
+   - Called by Jupiter during errors in tournaments
+   - Return a string representation of the engine's internal state for logging
+2. game_over: `game_over(self) -> None`
+   - Called by Jupiter when a game concludes with this engine
+   - Used to log any internal metrics or statistics collected during a game
 
 #### Step 3 - Prepare For Execution
 
