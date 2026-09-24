@@ -22,6 +22,9 @@ class BaseEngine:
                 be the starting position. In FEN, knights are notated as 'n' and 
                 kings are notated as 'k'.
 
+        It is important that ALL engine state is reset on a call to init. A call 
+        to init on a previously initialised engine instance should give the same 
+        result as a call to init on a fresh instance.
         The engine is expected to function in accordance with the rules.
         """
         raise NotImplementedError("Please implement this method")
