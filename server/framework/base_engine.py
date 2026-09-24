@@ -1,14 +1,16 @@
 class TimeControl:
-    seconds: int
-    increment: int 
+    seconds: float
+    increment: float 
 
-    def __init__(self, seconds: int, increment: int = 0):
+    def __init__(self, seconds: float, increment: float = 0.0):
         self.seconds = seconds
         self.increment = increment
 
 class BaseEngine:
     def init(self, _tc: TimeControl, _fen: str | None = None) -> None:
         """ Initializes the engine.
+
+        REQUIRED
 
         Params:
             tc: 
@@ -27,6 +29,8 @@ class BaseEngine:
     def go(self, _ms_left: int) -> str | None:
         """ Searches for the best move given the amount of time left.
 
+        REQUIRED
+
         Params:
             ms_left: 
                 Remaining time to move in milliseconds.
@@ -44,6 +48,8 @@ class BaseEngine:
     def move(self, _move: str) -> None:
         """ Applies a move to the internal state of the engine.
 
+        REQUIRED
+
         Params:
             move: 
                 The move to make in UCI-Flavoured LAN. Examples of this format
@@ -56,6 +62,40 @@ class BaseEngine:
         The engine is expected to function in accordance with the rules.
         """
         raise NotImplementedError("Please implement this method")
+
+    def tuning_get_params(self) -> dict[str, float]:
+        """ Returns a dictionary of named, tunable engine parameters.
+
+        REQUIRED ONLY FOR TUNING
+
+        Returns:
+                A dictionary of named parameters and their corresponding values 
+                as currently set within your engine. These are the parameters 
+                that will be tuned. For example, you might return parameters  
+                controlling your evaluation function. All values must be 
+                normalised between -1.0 and 1.0 inclusive.
+
+        To enable automatic engine tuning you must implement this method.
+        """
+        raise NotImplementedError("Please implement this method to enable tuning")
+
+    def tuning_set_params(self, _params: dict[str, float]) -> None:
+        """ Assign parameters from a dictionary to the engine.
+
+        REQUIRED ONLY FOR TUNING
+
+        Params:
+            params: 
+                A dictionary of named parameters and their corresponding values 
+                to be passed to your engine. This will be called by the tuner 
+                to change the behaviour of your engine to see which parameter 
+                values are best. The names and types of the parameters will  
+                exactly match the ones returned from `tuning_get_params`. All 
+                params will be between -1.0 and 1.0 inclusive.
+
+        To enable automatic engine tuning you must implement this method.
+        """
+        raise NotImplementedError("Please implement this method to enable tuning")
 
     def game_over(self) -> None:
         """ Called when the current game ends.
@@ -76,4 +116,3 @@ class BaseEngine:
         state for debugging.
         """
         return repr(self)
-

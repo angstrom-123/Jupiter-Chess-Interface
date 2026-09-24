@@ -82,6 +82,12 @@ class EngineService:
     def game_over(self) -> None:
         instance.game_over()
 
+    def tuning_get_params(self) -> dict[str, float]:
+        return instance.tuning_get_params()
+
+    def tuning_set_params(self, params: dict[str, float]) -> None:
+        instance.tuning_set_params(params)
+
     def show(self) -> str:
         return instance.show()
 

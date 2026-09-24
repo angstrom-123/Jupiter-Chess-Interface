@@ -66,7 +66,7 @@ async function formSubmit(
         if (secString.length > 0) formTime += parseInt(secString);
         else formTime += 30; // TODO: Keep this default value in line with what the ui says
 
-        if (incString.length > 0) formIncrement = parseInt(incString);
+        if (incString.length > 0) formIncrement = parseFloat(incString);
 
         time = formTime;
         increment = formIncrement;

@@ -81,14 +81,14 @@ async function formSubmit(
         const incString: string = formData.get("custom-increment")! as string;
 
         var formTime: number = 0;
-        var formIncrement: number = 0;
+        var formIncrement: number = 0.0;
 
         if (minString.length > 0) formTime += 60 * parseInt(minString);
 
         if (secString.length > 0) formTime += parseInt(secString);
         else formTime += 30; // TODO: Keep this default value in line with what the ui says
 
-        if (incString.length > 0) formIncrement = parseInt(incString);
+        if (incString.length > 0) formIncrement = parseFloat(incString);
 
         time = formTime;
         increment = formIncrement;

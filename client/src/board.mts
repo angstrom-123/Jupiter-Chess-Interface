@@ -35,15 +35,15 @@ export const timeControlLookup: Map<TimeControl, TimeControlInfo> = new Map<
     TimeControl,
     TimeControlInfo
 >([
-    ["0:30", { time: 30, increment: 0 }],
-    ["1", { time: 60, increment: 0 }],
-    ["3", { time: 180, increment: 0 }],
-    ["5", { time: 300, increment: 0 }],
-    ["0:30+1", { time: 30, increment: 1 }],
-    ["1+1", { time: 60, increment: 1 }],
-    ["3+3", { time: 180, increment: 3 }],
-    ["5+5", { time: 300, increment: 5 }],
-    ["custom", { time: 30, increment: 0 }],
+    ["0:30", { time: 30, increment: 0.0 }],
+    ["1", { time: 60, increment: 0.0 }],
+    ["3", { time: 180, increment: 0.0 }],
+    ["5", { time: 300, increment: 0.0 }],
+    ["0:30+1", { time: 30, increment: 1.0 }],
+    ["1+1", { time: 60, increment: 1.0 }],
+    ["3+3", { time: 180, increment: 3.0 }],
+    ["5+5", { time: 300, increment: 5.0 }],
+    ["custom", { time: 30, increment: 0.0 }],
 ]);
 
 export enum GameOverReason {

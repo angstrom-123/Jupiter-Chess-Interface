@@ -6,6 +6,7 @@ import { CountdownTimer, type TimerDisplay } from "./countdown.mjs";
 import { START_FEN } from "./fenParser.mjs";
 import { Move } from "./move.mjs";
 import { Queue } from "./queue.mjs";
+import { humanReadableId } from "./readableId.mjs";
 
 export const TournamentTimeControls = [
     "0:10",
@@ -23,24 +24,24 @@ export const tournamentTimeControlLookup: Map<TournamentTimeControl, TimeControl
     TournamentTimeControl,
     TimeControlInfo
 >([
-    ["0:10", { time: 10, increment: 0 }],
-    ["0:20", { time: 20, increment: 0 }],
-    ["0:30", { time: 30, increment: 0 }],
-    ["1", { time: 60, increment: 0 }],
-    ["0:10+1", { time: 10, increment: 1 }],
-    ["0:20+1", { time: 20, increment: 1 }],
-    ["0:30+1", { time: 30, increment: 1 }],
-    ["1+1", { time: 60, increment: 1 }],
-    ["custom", { time: 30, increment: 0 }],
+    ["0:10", { time: 10, increment: 0.0 }],
+    ["0:20", { time: 20, increment: 0.0 }],
+    ["0:30", { time: 30, increment: 0.0 }],
+    ["1", { time: 60, increment: 0.0 }],
+    ["0:10+1", { time: 10, increment: 1.0 }],
+    ["0:20+1", { time: 20, increment: 1.0 }],
+    ["0:30+1", { time: 30, increment: 1.0 }],
+    ["1+1", { time: 60, increment: 1.0 }],
+    ["custom", { time: 30, increment: 0.0 }],
 ]);
 
-type TournamentEvent =
+export type TournamentEvent =
     | "TournamentEvent.GAME_START"
     | "TournamentEvent.GAME_END"
     | "TournamentEvent.MOVE"
     | "TournamentEvent.ERROR"
     | "TournamentEvent.TOURNAMENT_END";
-type GameOverReason =
+export type GameOverReason =
     | "timeout"
     | "checkmate"
     | "stalemate"
@@ -49,7 +50,7 @@ type GameOverReason =
     | "fifty move rule"
     | "interrupt"
     | "error";
-interface TournamentUpdate {
+export interface TournamentUpdate {
     event: TournamentEvent;
     white_ms: number | null;
     black_ms: number | null;
@@ -63,6 +64,9 @@ export class TournamentBoard {
     private controller: BoardController;
     private renderer: BoardRenderer;
 
+    private engine1: string = "";
+    private engine2: string = "";
+
     private whiteTimer: CountdownTimer | undefined;
     private blackTimer: CountdownTimer | undefined;
 
@@ -74,7 +78,16 @@ export class TournamentBoard {
     private lossHex: string = "#ff0602";
 
     private colorsSwapped: boolean = false;
-    private reasons: Map<GameOverReason, number> = new Map();
+    private reasons: Map<GameOverReason, number> = new Map([
+        ["timeout", 0],
+        ["checkmate", 0],
+        ["stalemate", 0],
+        ["material", 0],
+        ["repetition", 0],
+        ["fifty move rule", 0],
+        ["interrupt", 0],
+        ["error", 0],
+    ]);
     private wins: number[] = [0, 0];
     private draws: number = 0;
     private tournamentRunning: boolean = false;
@@ -172,6 +185,8 @@ export class TournamentBoard {
     }
 
     public async start(games: number, engine1: string, engine2: string, tc: TimeControlInfo) {
+        this.engine1 = engine1;
+        this.engine2 = engine2;
         this.whiteTimer = new CountdownTimer({
             title: engine1,
             from: tc.time,
@@ -223,9 +238,12 @@ export class TournamentBoard {
         // Only continue polling if the tournament is not finished
         if (!this.tournamentDone) {
             var timeoutMs: number = 400; // Nice slow rate to see animations
-            if (queueEmpty)
+            if (queueEmpty) {
                 timeoutMs = 50; // Wait a bit before polling the queue again
-            else if (!this.tournamentRunning) timeoutMs = 1; // Run through the remaining events as fast as possible
+            } else if (!this.tournamentRunning) {
+                this.pollEventQueue(); // Poll immediately if events in queue but tournament over
+                return;
+            }
             setTimeout(async () => await this.pollEventQueue(), timeoutMs);
         }
     }
@@ -257,8 +275,8 @@ export class TournamentBoard {
                 }
                 break;
             case "TournamentEvent.GAME_END":
-                const count: number | undefined = this.reasons.get(update.reason!);
-                this.reasons.set(update.reason!, count ? count + 1 : 1);
+                const count: number = this.reasons.get(update.reason!)!;
+                this.reasons.set(update.reason!, count + 1);
 
                 if (update.winner === null) {
                     this.draws++;
@@ -436,22 +454,21 @@ export class TournamentBoard {
     }
 
     private downloadResults() {
-        // TODO
-        // const game: GameDownload = {
-        //     startFen: this.controller.getStartingFen(),
-        //     moves: this.controller.getHistory().map((x) => x.toLan()),
-        //     whitePlayer: this.gameInfo!.whitePlayer,
-        //     blackPlayer: this.gameInfo!.blackPlayer,
-        // };
-        //
-        // const blob: Blob = new Blob([JSON.stringify(game)], { type: "application/json" });
-        // const url: string = URL.createObjectURL(blob);
-        //
-        // const link: HTMLAnchorElement = document.createElement("a");
-        // link.href = url;
-        // link.download = `${humanReadableId()}.jupiter.json`;
-        // link.click();
-        // URL.revokeObjectURL(url);
+        const data: Object = {
+            engine_1: this.engine1,
+            engine_2: this.engine2,
+            wins_1: this.wins[0]!,
+            wins_2: this.wins[1]!,
+            draws: this.draws,
+        };
+        const blob: Blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+        const url: string = URL.createObjectURL(blob);
+
+        const link: HTMLAnchorElement = document.createElement("a");
+        link.href = url;
+        link.download = `${this.engine1}-vs-${this.engine2}-${humanReadableId()}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
     }
 
     private renderResultsBar() {

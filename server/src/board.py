@@ -215,7 +215,7 @@ class Board:
             positions[hash] = count
 
         # 50-move rule
-        if self._fifty_ctr >= 75:
+        if self._fifty_ctr >= 100:
             return "fifty move rule"
 
         return None

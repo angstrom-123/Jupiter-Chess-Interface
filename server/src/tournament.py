@@ -4,6 +4,7 @@ import time
 
 from pathlib import Path
 from collections.abc import AsyncGenerator
+from typing import Callable
 
 from src.board import Board, GameOverReason, Move
 from src.board_state import Color, opposite_color, show_color
@@ -65,9 +66,9 @@ class TournamentResults:
 
 class TournamentTimer:
     def __init__(self, tc: TimeControl):
-        self._white_ms: int = tc.seconds * 1000
-        self._black_ms: int = tc.seconds * 1000 
-        self._incremenent_ms: int = tc.increment * 1000
+        self._white_ms: int = round(tc.seconds * 1000)
+        self._black_ms: int = round(tc.seconds * 1000) 
+        self._incremenent_ms: int = round(tc.increment * 1000)
         self._start_ms: int = 0
         self._is_white: bool = True
 
@@ -87,34 +88,64 @@ class TournamentTimer:
             self._black_ms -= (delta_ms - self._incremenent_ms) 
         self._is_white = not self._is_white
 
+InitFn = Callable[[BaseEngine], None] | None
+
 class TournamentRunner:
     _engine_1_path: Path
-    _engine_1: BaseEngine
-    _process_1: subprocess.Popen[bytes]
+    _engine_1: BaseEngine | None = None
+    _process_1: subprocess.Popen[bytes] | None = None
+    _post_init_1: InitFn 
     _engine_2_path: Path
-    _engine_2: BaseEngine
-    _process_2: subprocess.Popen[bytes]
+    _engine_2: BaseEngine | None = None
+    _process_2: subprocess.Popen[bytes] | None = None
+    _post_init_2: InitFn
     _interrupted: bool = False
     _loader: Loader
 
     def __init__(
         self,
         loader: Loader,
-        white_engine_path: Path,
-        black_engine_path: Path,
+        engine_1_path: Path,
+        engine_2_path: Path,
         tc: TimeControl,
-        count: int
+        count: int,
+        post_init_1: InitFn = None,
+        post_init_2: InitFn = None
     ):
-        self._engine_1_path = white_engine_path
-        self._engine_2_path = black_engine_path
-        self._engine_1, self._process_1 = loader.launch_engine(white_engine_path)
-        self._engine_2, self._process_2 = loader.launch_engine(black_engine_path)
+        self._engine_1_path = engine_1_path
+        self._engine_2_path = engine_2_path
+        self._post_init_1 = post_init_1
+        self._post_init_2 = post_init_2
         self._tc: TimeControl = tc 
         self._count: int = count
         self._results: TournamentResults = TournamentResults()
         self._loader = loader
 
+    async def init(self):
+        self._engine_1, self._process_1 = await self._loader.launch_engine(self._engine_1_path)
+        self._engine_2, self._process_2 = await self._loader.launch_engine(self._engine_2_path)
+
+    def cleanup(self):
+        if self._process_1 is None or self._process_2 is None:
+            raise AttributeError("init was not called on tournament runner")
+        self._process_1.terminate()
+        self._process_2.terminate()
+
+    def get_engine_1(self) -> BaseEngine:
+        if self._engine_1 is None:
+            raise AttributeError("init was not called on tournament runner")
+        return self._engine_1
+
+    def get_engine_2(self) -> BaseEngine:
+        if self._engine_2 is None:
+            raise AttributeError("init was not called on tournament runner")
+        return self._engine_2
+
     def interrupt(self):
+        if self._engine_1 is None or self._engine_2 is None:
+            raise AttributeError("init was not called on tournament runner")
+        self._engine_1.game_over()
+        self._engine_2.game_over()
         self._interrupted = True 
 
     def is_interrupted(self) -> bool:
@@ -124,11 +155,13 @@ class TournamentRunner:
         return self._results
 
     async def run_no_stream(self) -> TournamentResults:
-        async for s in self.run():
+        async for _ in self.run():
             pass
         return self._results
 
     async def run(self) -> TournamentStream:
+        self._interrupted = False 
+
         if self._count <= 0:
             raise ValueError("Tournament game count must be positive")
 
@@ -175,25 +208,37 @@ class TournamentRunner:
                     print(f" - {k}: {reason_counts[k]}")
                 print(f" - error: {len(self._results.failures)}")
                 
-            except Exception as e:
+            except EOFError as e:
                 print(f"Tournament exception caught: '{e}'")
 
                 # Refresh the processes to flush any corrupted state
+                if self._process_1 is None or self._process_2 is None:
+                    raise AttributeError("init was not called on tournament runner")
                 self._process_1.terminate()
                 self._process_2.terminate()
-                self._engine_1, self._process_1 = self._loader.launch_engine(self._engine_1_path)
-                self._engine_2, self._process_2 = self._loader.launch_engine(self._engine_2_path)
+                self._engine_1, self._process_1 = await self._loader.launch_engine(self._engine_1_path)
+                self._engine_2, self._process_2 = await self._loader.launch_engine(self._engine_2_path)
 
                 self._results.failures.append([]) # NOTE: History not saved for this type of error currently
                 yield TournamentUpdate(TournamentEvent.GAME_END, winner=None, reason="error")
 
+        if self._process_1 is None or self._process_2 is None:
+            raise AttributeError("init was not called on tournament runner")
         self._process_1.terminate()
         self._process_2.terminate()
         yield TournamentUpdate(TournamentEvent.TOURNAMENT_END);
 
     async def _play_game(self, swapped: bool) -> TournamentStream:
+        if self._engine_1 is None or self._engine_2 is None:
+            raise AttributeError("init was not called on tournament runner")
+
         self._engine_1.init(self._tc)
+        if self._post_init_1 is not None:
+            self._post_init_1(self._engine_1)
+
         self._engine_2.init(self._tc)
+        if self._post_init_2 is not None:
+            self._post_init_2(self._engine_2)
 
         players: tuple[BaseEngine, BaseEngine] = (self._engine_1, self._engine_2) if not swapped else (self._engine_2, self._engine_1)
         board: Board = Board()
@@ -204,53 +249,68 @@ class TournamentRunner:
         while True:
             turn: Color = board.get_state().turn
 
-            # Check if game ended on previous move
-            if (reason := board.is_game_over()) is not None:
-                self._results.reasons.append(reason)
-                print(f"Game ended with {reason} on {show_color(turn)}'s turn")
+            try:
+                # Check if game ended on previous move
+                if (reason := board.is_game_over()) is not None:
+                    self._results.reasons.append(reason)
+                    print(f"Game ended with {reason} on {show_color(turn)}'s turn")
+                    for player in players:
+                        player.game_over();
+                    yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn) if reason == "checkmate" else None, reason=reason)
+                    return
+
+                # Get move from engine
+                lan: str | None = players[turn].go(timer.ms_left(turn))
+
+                # Check for timeout (engine failed to even generate move)
+                if lan is None:
+                    self._results.reasons.append("timeout")
+                    print(f"Game ended with timeout after {show_color(turn)}'s move")
+                    for player in players:
+                        player.game_over();
+                    yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn), reason="timeout")
+                    return
+
+                # Only allow the move if it is considered legal
+                if not board.is_legal_move(move := Move.from_lan(board.get_state(), lan)):
+                    print(f"Illegal move {lan}")
+                    print(repr(board))
+                    print("\nWhite engine state:")
+                    print(players[0].show())
+                    print("\nBlack engine state")
+                    print(players[1].show())
+                    self._results.failures.append(board.get_history())
+                    yield TournamentUpdate(TournamentEvent.INTERNAL_FAILURE)
+                    return
+
+                # Apply move to engines and internal state
                 for player in players:
-                    player.game_over();
-                yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn) if reason == "checkmate" else None, reason=reason)
-                return
+                    player.move(lan)
+                _ = board.make_move(move)
+                timer.swap()
 
-            # Get move from engine
-            lan: str | None = players[turn].go(timer.ms_left(turn))
-
-            # Check for timeout (engine failed to even generate move)
-            if lan is None:
-                self._results.reasons.append("timeout")
-                print(f"Game ended with timeout after {show_color(turn)}'s move")
-                for player in players:
-                    player.game_over();
-                yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn), reason="timeout")
-                return
-
-            # Only allow the move if it is considered legal
-            if not board.is_legal_move(move := Move.from_lan(board.get_state(), lan)):
-                print(f"Illegal move {lan}")
-                print(repr(board))
-                print("\nWhite engine state:")
-                print(players[0].show())
-                print("\nBlack engine state")
-                print(players[1].show())
-                self._results.failures.append(board.get_history())
-                yield TournamentUpdate(TournamentEvent.INTERNAL_FAILURE)
-                return
-
-            # Apply move to engines and internal state
-            for player in players:
-                player.move(lan)
-            _ = board.make_move(move)
-            timer.swap()
-
-            # Check for timeout (clock)
-            if timer.ms_left(turn) <= 0:
-                self._results.reasons.append("timeout")
-                print(f"Game ended with timeout after {show_color(turn)}'s move")
-                for player in players:
-                    player.game_over();
-                yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn), reason="timeout")
-                return
+                # Check for timeout (clock)
+                if timer.ms_left(turn) <= 0:
+                    self._results.reasons.append("timeout")
+                    print(f"Game ended with timeout after {show_color(turn)}'s move")
+                    for player in players:
+                        player.game_over();
+                    yield TournamentUpdate(TournamentEvent.INTERNAL_SUCCESS, winner=opposite_color(turn), reason="timeout")
+                    return
+            except Exception as e:
+                try:
+                    print("player 0:")
+                    print(players[0].show())
+                except:
+                    pass
+                try:
+                    print("player 1:")
+                    print(players[1].show())
+                except:
+                    pass
+                print(f"Unrecoverable error caused by {show_color(turn)} player")
+                print(e.with_traceback)
+                raise e
 
             yield TournamentUpdate(
                 TournamentEvent.MOVE, 

@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Jupiter Client</title>
+    <link rel="stylesheet" href="assets/common.css">
     <link rel="stylesheet" href="assets/index.css">
 </head>
 
@@ -12,6 +13,7 @@
             <a class="active" href="/">Play</a>
             <a href="/replay">Load</a>
             <a href="/tournament">Tournament</a>
+            <a href="/tune">Tune</a>
             <a href="https://github.com/angstrom-123/Jupiter-Chess-Interface">Jupiter Client</a>
             <a href="https://github.com/angstrom-123/Jupiter-Chess-Engine">Jupiter Engine</a>
         </div>
@@ -112,7 +114,7 @@
                                     <label for="seconds"></label>
                                 </div>
                                 <div>
-                                    <input type="number" min="0" placeholder="inc (0)" id="increment" name="custom-increment">
+                                    <input type="number" step="0.01" min="0.0" placeholder="inc (0.0)" id="increment" name="custom-increment">
                                     <label for="increment"></label>
                                 </div>
                             </div>

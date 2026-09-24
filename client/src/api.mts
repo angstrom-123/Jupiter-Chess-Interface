@@ -37,6 +37,15 @@ export namespace api {
         return engines;
     }
 
+    export async function tunableEngineList(): Promise<string[]> {
+        const { engines } = (await retryApiCall({
+            endpoint: "/tunable-engine-list/",
+            method: "GET",
+        })) as EngineListResponse;
+        console.log(engines);
+        return engines;
+    }
+
     export async function gameOver(): Promise<void> {
         await retryApiCall({
             endpoint: "/game-over/",
@@ -91,6 +100,32 @@ export namespace api {
     export async function stopTournament(): Promise<void> {
         await retryApiCall({
             endpoint: "/stop-tournament/",
+            method: "GET",
+        });
+    }
+
+    export async function startTuning(
+        handler: (event: Object) => void,
+        iterations: number,
+        engine: string,
+        c: number | undefined,
+        smallestChange: number | undefined,
+    ): Promise<void> {
+        await streamApiCall(handler, {
+            endpoint: "/start-tuning/",
+            method: "POST",
+            body: {
+                iterations: iterations,
+                engine: engine,
+                c: c,
+                smallest_change: smallestChange,
+            },
+        });
+    }
+
+    export async function stopTuning(): Promise<void> {
+        await retryApiCall({
+            endpoint: "/stop-tuning/",
             method: "GET",
         });
     }

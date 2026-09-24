@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jupiter Client</title>
+    <link rel="stylesheet" href="assets/common.css">
+    <link rel="stylesheet" href="assets/tune.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="side-bar">
+            <a href="/">Jupiter Client</a>
+            <a href="/">Play</a>
+            <a href="/replay">Load</a>
+            <a href="/tournament">Tournament</a>
+            <a class="active" href="/tune">Tune</a>
+            <a href="https://github.com/angstrom-123/Jupiter-Chess-Interface">Jupiter Client</a>
+            <a href="https://github.com/angstrom-123/Jupiter-Chess-Engine">Jupiter Engine</a>
+        </div>
+        <div class="content">
+            <div id="click-cover" class="click-cover"></div>
+            <div class="cards-parent">
+                <div id="loading-menu" class="loading-menu">
+                    <p>Loading...</p>
+                </div>
+                <div class="popup-menu">
+                    <div class="heading-container">
+                        <p>Tuning In Progress</p>
+                    </div>
+                    <div class="info-container">
+                        <p>Engine: <span id="engine-span"></span></p>
+                        <p>Iteration: <span id="iteration-span"></span></p>
+                        <p>Perturbation Magnitude: <span id="c-span">0.05</span></p>
+                        <p>Adjustment Magnitude: <span id="smallest-change-span">0.05</span></p>
+                    </div>
+                    <div class="param-headings">
+                        <label>Parameter Name</label>
+                        <label>Current</label>
+                        <label>Previous</label>
+                    </div>
+                    <div id="param-container" class="param-container">
+                    </div>
+                    <div class="middle-card">
+                        <button title="Flip Board" id="flip-board"><img src="assets/icons/repeat.png" alt="Flip board" style="transform: rotate(90deg); width: 75%;"></button>
+                        <button title="End Tournament" id="resign"><span id="confirm-resign"></span><img id="resign-icon" src="assets/icons/white-flag.png" alt="End Tournament" style="width: 80%;"></button>
+                        <button title="Copy FEN" id="fen"><img src="assets/icons/copy.png" alt="Copy FEN" style="width: 75%;"></button>
+                    </div>
+                </div>
+                <div id="setup-tuning-menu" class="popup-menu">
+                    <div class="heading-container">
+                        <p>Tuning Setup</p>
+                    </div>
+                    <form id="setup-tuning-form" onsubmit="return false;">
+                        <div class="play-against-container">
+                            <label>Tunable Engine</label>
+                            <div class="play-against">
+                                <select id="engine" name="engine" value="engine">
+                                </select>
+                            </div>
+                        </div>
+                        <label>SPSA Hyperparameters</label>
+                        <div class="hyperparam-container">
+                            <div>
+                                <label for="iterations">Iterations</label>
+                                <input type="number" min="1" value="500" id="iterations" name="iterations">
+                            </div>
+                            <div>
+                                <label for="c">Perturbation Magnitude</label>
+                                <input type="number" step="0.01" min="0.0" max="1.0" value="0.05" id="c" name="c">
+                            </div>
+                            <div>
+                                <label for="smallest-change">Adjustment Scale Factor</label>
+                                <input type="number" step="0.01" min="0.0" max="1.0" value="0.05" id="smallest-change" name="smallest-change">
+                            </div>
+                        </div>
+                        <input type="submit" value="Start Tuning">
+                    </form>
+                </div>
+            </div>
+            <div class="board-container">
+                <div id="fen-menu" class="promotion-container">
+                    <div class="fen-menu">
+                        <button class="close-button" id="close-fen"><img src="assets/icons/close.png" alt="Close" style="width: 100%;"></button>
+                        <p>Current Position FEN</p>
+                        <div>
+                            <span id="fen-span"></span>
+                            <button title="Copy to Clipboard" id="copy-fen"><img src="assets/icons/copy.png" alt="Copy" style="width: 80%;"></button>
+                        </div>
+                    </div>
+                </div>
+                <div id="tuning-over-menu" class="promotion-container">
+                    <div class="tuning-over-menu">
+                        <p>Tuning Done</p>
+                        <div id="final-param-container" class="param-container">
+                        </div>
+                        <div class="button-container">
+                            <button title="Download Results" id="download-results"><img src="assets/icons/download.png" alt="Download" style="width: 80%;"></button>
+                            <button title="Ok" id="tuning-over-ok"><img src="assets/icons/check.png" alt="Ok" style="width: 90%;"></button>
+                        </div>
+                    </div>
+                </div>
+                <div id="tuning-loading-menu" class="promotion-container">
+                    <div class="tuning-loading-menu">
+                        <p>Stopping Tuner...</p>
+                    </div>
+                </div>
+                <canvas id="board-canvas" class="board-canvas"></canvas>
+                <canvas id="sprite-canvas" class="sprite-canvas"></canvas>
+            </div>
+        </div>
+</body>
+<script type="module" src="assets/dist/tune.mjs" defer></script>
+</html>

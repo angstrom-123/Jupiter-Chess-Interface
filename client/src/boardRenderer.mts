@@ -299,6 +299,7 @@ export class BoardRenderer {
         end: BoardCoordinate,
         state: BoardState,
         onComplete: () => void,
+        speedMultiplier: number = 1.0,
     ): Promise<void> {
         if (this.flipped) {
             start = new BoardCoordinate(7, 7).sub(start);
@@ -308,7 +309,7 @@ export class BoardRenderer {
         // 150ms + 25ms per square moved
         const dx: number = Math.abs(end.x - start.x);
         const dy: number = Math.abs(end.y - start.y);
-        const animationMs: number = 150 + Math.sqrt(dx * dx + dy * dy) * 25;
+        const animationMs: number = (150 + Math.sqrt(dx * dx + dy * dy) * 25) / speedMultiplier;
 
         const squareSize: number = this.spriteCanvas.width / 8;
 
