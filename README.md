@@ -38,7 +38,8 @@ uv venv
 #### Windows CMD:
 
 ```shell
-cd server 
+cd server
+uv venv
 .venv\bin\activate.bat
 ```
 
