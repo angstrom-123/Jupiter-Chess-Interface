@@ -18,11 +18,12 @@ npm run build
 cd ..
 ```
 
-### Source the virtual environment
+### Create Source the virtual environment
 
 #### Linux / Mac
 ```shell
 cd server
+uv venv
 source .venv/bin/activate
 ```
 
