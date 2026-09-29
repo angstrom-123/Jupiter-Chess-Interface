@@ -50,6 +50,10 @@ uv pip install -e . --force-reinstall
 uv sync
 ```
 
+### Build any engines
+
+Make sure that any engine implementations inside of `/engines/` are fully built / compiled, otherwise the server will error-out when validating them on startup.
+
 ### Start the server
 
 ```shell
