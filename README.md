@@ -30,7 +30,8 @@ source .venv/bin/activate
 #### Windows Powershell:
 
 ```shell
-cd server 
+cd server
+uv venv
 .venv\bin\activate.ps1
 ```
 
