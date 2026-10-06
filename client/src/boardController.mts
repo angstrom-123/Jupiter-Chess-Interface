@@ -112,7 +112,6 @@ export class BoardController {
         this.attacks = [new Array<boolean>(64), new Array<boolean>(64)];
         this.updateAttacks();
 
-        this.state = new BoardState();
         this.zobristTable = new ZobristTable();
         this.positionHistory = [this.zobristTable.computeKey(this.state)];
         this.moveHistory = [];

@@ -149,6 +149,8 @@ export class BoardRenderer {
     }
 
     public drawPieces(state: BoardState) {
+        state.showPieces();
+
         // Don't draw if not done loading yet
         if (!this.loaded) {
             console.warn("Requested sprite draw but not finished loading");
@@ -363,15 +365,16 @@ export class BoardRenderer {
         const w: string = svgElement.getAttribute("width")?.replace("px", "") || "100";
         const h: string = svgElement.getAttribute("height")?.replace("px", "") || "100";
 
-        if (!svgElement.getAttribute("viewbox")) {
-            svgElement.setAttribute("viewbox", `0 0 ${w} ${h}`);
+        if (!svgElement.getAttribute("viewBox")) {
+            svgElement.setAttribute("viewBox", `0 0 ${w} ${h}`);
         }
+
         svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
         svgElement.setAttribute("width", w);
         svgElement.setAttribute("height", h);
 
         const serialized: string = new XMLSerializer().serializeToString(doc);
-        const blob: Blob = new Blob([serialized], { type: "image/svg+xml" });
+        const blob: Blob = new Blob([serialized], { type: "image/svg+xml;charset=utf-8" });
         const blobUrl: string = URL.createObjectURL(blob);
 
         // Load
@@ -386,11 +389,12 @@ export class BoardRenderer {
                 svg.style.aspectRatio = `${svg.naturalWidth} / ${svg.naturalHeight}`;
 
                 // Clean up
-                URL.revokeObjectURL(blobUrl);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 500);
+
                 res(svg);
             };
             svg.onerror = () => rej(new Error(`Failed to load svg: ${url}`));
-            svg.crossOrigin = "anonymous";
+            // svg.crossOrigin = "anonymous";
             svg.src = blobUrl;
         });
     }

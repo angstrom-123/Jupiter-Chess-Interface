@@ -22,7 +22,6 @@ export class FenParser {
             for (let j: number = chunk.start; j < chunk.end; j++) {
                 if (boardIndex >= 64) throw new Error("Failed to parse FEN - Bad piece positions");
 
-                // const c: string = fen.charAt(j);
                 const c: Char = char(fen.charAt(j));
                 const color: Color = c.code > char("Z").code ? Color.BLACK : Color.WHITE;
                 switch (c.char) {
