@@ -73,7 +73,14 @@ class Loader:
         env["PYTHONPATH"] = os.path.pathsep.join(additional_paths)
 
         port: int = get_free_port()
-        proc: subprocess.Popen[bytes] = subprocess.Popen([python_exec, "src/run_engine.py", str(engine_dir), str(port)], env=env)
+
+        runner_dir: Path = Path("src") / "run_engine.py"
+        runner_dir = runner_dir.resolve()
+        engine_dir = engine_dir.resolve()
+
+        print(python_exec)
+
+        proc: subprocess.Popen[bytes] = subprocess.Popen([python_exec, str(runner_dir), str(engine_dir), str(port)], env=env)
         # TODO: Test
         # time.sleep(1.0)
 

@@ -150,6 +150,7 @@ export namespace api {
             headers: {
                 "Content-Type": "application/json",
                 Accept: "application/json",
+		"Access-Control-Allow-Origin": "*",
             },
         };
         // Only add a body field if one is supplied
@@ -175,6 +176,7 @@ export namespace api {
             headers: {
                 "Content-Type": "application/json",
                 Accept: "text/event-stream",
+		"Access-Control-Allow-Origin": "*",
             },
         };
         // Only add a body field if one is supplied

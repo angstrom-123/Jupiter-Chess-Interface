@@ -183,7 +183,9 @@ div p {
     font-size: 36pt;
     color: var(--white);
     align-items: center;
-    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .card-timer {

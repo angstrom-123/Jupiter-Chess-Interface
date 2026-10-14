@@ -10,6 +10,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.engine_wrapper import EngineWrapper
 from src.board import GameOverReason
@@ -116,6 +117,14 @@ mimetypes.add_type("text/javascript", ".mjs")
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # ==================== FastAPI Endpoints ==================== 
 
 @app.post("/game-start/")
@@ -181,13 +190,19 @@ async def best_move(request: Request):
     if state.turn == Color.WHITE:
         if state.white_engine is None:
             return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print("White engine looking for move")
         move = state.white_engine.go(info.ms_left)
     else:
         if state.black_engine is None:
             return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print("Black engine looking for move")
         move = state.black_engine.go(info.ms_left)
 
+    print(f"Raw engine move: '{move}'")
+
     lan: str = move if move is not None else ""
+
+    print(f"Final move LAN: '{lan}'")
 
     return Response(
         status_code=status.HTTP_200_OK,
@@ -217,10 +232,16 @@ async def game_over(_request: Request):
     print("\n\n=== GAME OVER ===\n")
     if state.white_engine is not None:
         print("White Engine Post Game Metrics:")
-        state.white_engine.game_over()
+        try:
+            state.white_engine.game_over()
+        except:
+            pass
     if state.black_engine is not None:
         print("Black Engine Post Game Metrics:")
-        state.black_engine.game_over()
+        try:
+            state.black_engine.game_over()
+        except:
+            pass
 
     return NO_RESPONSE
 
@@ -290,6 +311,7 @@ async def start_tournament(request: Request) -> StreamingResponse:
         stream_tournament(), 
         media_type="text/event-stream", 
         headers={
+            "Access-Control-Allow-Origin": "*",
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no"
@@ -410,6 +432,7 @@ async def start_tuning(request: Request) -> StreamingResponse:
         stream_tuning(), 
         media_type="text/event-stream", 
         headers={
+            "Access-Control-Allow-Origin": "*",
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no"
