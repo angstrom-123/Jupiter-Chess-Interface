@@ -14,25 +14,29 @@
 
 ```shell
 cd client
+npm install
 npm run build
 cd ..
 ```
 
-### Create Source the virtual environment
-
-#### Linux / Mac
+### Create Source the Virtual Environment
 
 ```shell
 cd server
 uv venv
+```
+
+### Source the Virtual Environment
+
+#### Linux / Mac
+
+```shell
 source .venv/bin/activate
 ```
 
 #### Windows
 
 ```shell
-cd server
-uv venv
 .venv\Scripts\activate
 ```
 
@@ -44,7 +48,7 @@ uv sync
 
 ### Build any engines
 
-Make sure that any engine implementations inside of `/engines/` are fully built / compiled, otherwise the server will error-out when validating them on startup.
+Make sure that any engine implementations inside of `/engines` are fully built / compiled, otherwise the server will error-out when validating them on startup.
 If there are no engines in the directory, then do not worry - the server should work fine.
 
 ### Start the server
@@ -58,14 +62,11 @@ fastapi run
 The active port will be listed by the `fastapi run` command (default 8000).
 Access at localhost:port (default http://localhost:8000).
 
-## Troubleshooting
-
-In my experience, this experience is relatively pain-free on Linux and MacOS as long as all dependencies are installed and updated and all engines are build before running the server.
-On windows, there is potential for problems. I will list off some issues I ran into when getting this to work on Windows and the solutions I got to. These may not be the same issues that you experience. I am not an experienced Windows developer, refer to the internet for issues that I do not cover here.
+## Windows Issues I Ran Into (And how to fix them)
 1. Browser unable to connect to fastapi server after starting it up:
    - This happens because fastapi is not able to find your python executable
    - First, verify that there are no browser policies (e.g., https only mode, proxies) that may be blocking localhost connections
-     - If there is a browser polocy like this, then disable it and restart your browser before retrying
+     - If there is a browser policy like this, then disable it and restart your browser before retrying
    - Next, verify that there are no aliases for Python on your machine
      - You can check this by searching for "manage app execution aliases" in the start menu and finding python.exe and python3.exe
      - If the alias is checked "on" then switch it to "off"
