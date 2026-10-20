@@ -78,11 +78,12 @@ class Loader:
         runner_dir = runner_dir.resolve()
         engine_dir = engine_dir.resolve()
 
-        print(python_exec)
-
-        proc: subprocess.Popen[bytes] = subprocess.Popen([python_exec, str(runner_dir), str(engine_dir), str(port)], env=env)
-        # TODO: Test
-        # time.sleep(1.0)
+        # Try with detected python executable, fall back to just trying 'python' (could work on windows)
+        proc: subprocess.Popen[bytes] | None = None
+        try:
+            proc = subprocess.Popen([python_exec, str(runner_dir), str(engine_dir), str(port)], env=env)
+        except:
+            proc = subprocess.Popen(["python", str(runner_dir), str(engine_dir), str(port)], env=env)
 
         # Poll the process to see if it is ready before returning
         while True:
