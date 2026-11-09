@@ -34,6 +34,7 @@ class Loader:
             engine.tuning_set_params({})
         except Exception as e:
             if isinstance(e, NotImplementedError):
+                print(f"Engine process terminated", flush=True)
                 process.terminate()
                 return False
 
@@ -41,9 +42,11 @@ class Loader:
             _ = engine.tuning_get_params()
         except Exception as e:
             if isinstance(e, NotImplementedError):
+                print(f"Engine process terminated", flush=True)
                 process.terminate()
                 return False 
 
+        print(f"Engine process terminated", flush=True)
         process.terminate()
         return True
 

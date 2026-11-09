@@ -1,3 +1,0 @@
-# TODO
-
-- Scoreboard (wins/losses)

@@ -4,9 +4,9 @@
 > Please clone recursively to also get access to engines bundled with this repo.
 
 ## Prerequisites
-- Python >=3.14
+- Python >=3.12
 - Astral uv
-- npm
+- NodeJS
 
 ## Build and Run
 

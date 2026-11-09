@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import asyncio
 from collections.abc import AsyncIterable
 
@@ -29,11 +31,9 @@ class State(BaseModel):
     
     turn: Color = Color.WHITE
 
-    # white_engine: BaseEngine | None = None
     white_engine: EngineWrapper | None = None
     white_engine_process: subprocess.Popen[bytes] | None = None
 
-    # black_engine: BaseEngine | None = None
     black_engine: EngineWrapper | None = None
     black_engine_process: subprocess.Popen[bytes] | None = None
 
@@ -60,8 +60,6 @@ async def init():
     for dir_path in loader.engine_dirs:
          if await loader.is_tunable(dir_path):
             tunable_engines[dir_path.name] = dir_path
-
-    print(tunable_engines)
 
     initialised = True
 
@@ -190,19 +188,13 @@ async def best_move(request: Request):
     if state.turn == Color.WHITE:
         if state.white_engine is None:
             return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        print("White engine looking for move")
         move = state.white_engine.go(info.ms_left)
     else:
         if state.black_engine is None:
             return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        print("Black engine looking for move")
         move = state.black_engine.go(info.ms_left)
 
-    print(f"Raw engine move: '{move}'")
-
     lan: str = move if move is not None else ""
-
-    print(f"Final move LAN: '{lan}'")
 
     return Response(
         status_code=status.HTTP_200_OK,
